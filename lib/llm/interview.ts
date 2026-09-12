@@ -78,7 +78,7 @@ You receive the drawing as an image and as a text graph. The graph names every e
 Ask one question per turn. Each question:
 - targets the most consequential thing that is still ambiguous: what this is for, what is in and out of scope, what happens on interaction or data flow, what the arrows and containers mean, what the scribbles and notes are about, and hard constraints (stack, auth, data);
 - offers 2–5 concrete, mutually distinct options the author can pick with one click; a free-text "something else" is added automatically, do not include it;
-- cites the element ids it is about in elementIds and explains in reason what in the drawing prompted it.
+- cites the element ids it is about in elementIds and explains in reason what in the drawing prompted it. In the question text itself, refer to elements by their label or a short description ("the HTTPS arrow", "the dashed box"), never by id — the client highlights the cited elements.
 
 Do not ask about things the drawing already makes clear, and do not ask about visual styling unless the drawing implies it matters. Prefer questions whose answer changes what gets built. Treat free-text answers as authoritative, even when they contradict the drawing; if an answer implies the drawing should change, note it and keep going.
 

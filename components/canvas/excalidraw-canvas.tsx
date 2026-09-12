@@ -28,7 +28,7 @@ export default function ExcalidrawCanvas({
   onApi,
 }: CanvasProps) {
   const { resolvedTheme } = useTheme()
-  const { onChange, status, scene, markDirty } = useAutosave(projectId)
+  const { onChange, status, scene, prime } = useAutosave(projectId)
 
   React.useEffect(() => onStatus?.(status), [onStatus, status])
   React.useEffect(() => onScene?.(scene), [onScene, scene])
@@ -37,7 +37,7 @@ export default function ExcalidrawCanvas({
   const initialData = React.useMemo(
     () => async () => {
       const { data, dirty } = await loadScene(projectId, project)
-      if (dirty) markDirty()
+      prime(data, dirty)
       return data
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps

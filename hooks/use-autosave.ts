@@ -24,7 +24,7 @@ const MAX_WAIT_MS = 10_000
 
 type Snapshot = {
   elements: readonly ExcalidrawElement[]
-  appState: AppState
+  appState: Partial<AppState>
   files: BinaryFiles
 }
 
@@ -113,6 +113,32 @@ export function useAutosave(projectId: Id<"projects">) {
       maxTimer.current = setTimeout(() => void flushRef.current(), MAX_WAIT_MS)
   }, [])
 
+  /**
+   * Seed the baseline from the loaded scene so the first real edit is not
+   * mistaken for Excalidraw mounting. A dirty mirror is uploaded right away.
+   */
+  const prime = React.useCallback(
+    (
+      data: {
+        elements?: readonly ExcalidrawElement[] | null
+        appState?: Partial<AppState> | null
+        files?: BinaryFiles | null
+      } | null,
+      dirty: boolean
+    ) => {
+      const elements = data?.elements ?? []
+      lastVersion.current = getSceneVersion(elements)
+      latest.current = {
+        elements,
+        appState: data?.appState ?? {},
+        files: data?.files ?? {},
+      }
+      setScene(serializeScene(elements))
+      if (dirty) schedule()
+    },
+    [schedule]
+  )
+
   /** Excalidraw's onChange: fires on every pointer move, so bail unless an element version changed. */
   const onChange = React.useCallback(
     (
@@ -123,7 +149,7 @@ export function useAutosave(projectId: Id<"projects">) {
       const version = getSceneVersion(elements)
       latest.current = { elements, appState, files }
       if (lastVersion.current === null) {
-        // First call is Excalidraw mounting the initial data — nothing to save yet.
+        // Mounted without prime(): treat this as the baseline.
         lastVersion.current = version
         setScene(serializeScene(elements))
         return
@@ -135,17 +161,20 @@ export function useAutosave(projectId: Id<"projects">) {
     [schedule]
   )
 
-  /** Force a save cycle, e.g. when the mirror was loaded dirty. */
-  const markDirty = React.useCallback(() => {
-    lastVersion.current = -1
-    schedule()
-  }, [schedule])
-
   // Unload: the async upload can't be awaited, but the mirror can be written synchronously.
+  const statusRef = React.useRef(status)
+  React.useEffect(() => {
+    statusRef.current = status
+  }, [status])
   React.useEffect(() => {
     const persist = () => {
       const snap = latest.current
-      if (!snap || status === "saved" || status === "idle") return
+      if (
+        !snap ||
+        statusRef.current === "saved" ||
+        statusRef.current === "idle"
+      )
+        return
       const json = serializeAsJSON(
         snap.elements,
         snap.appState,
@@ -166,9 +195,11 @@ export function useAutosave(projectId: Id<"projects">) {
     return () => {
       window.removeEventListener("beforeunload", persist)
       document.removeEventListener("visibilitychange", onVisibility)
-      clearTimers()
     }
-  }, [projectId, status])
+  }, [projectId])
 
-  return { onChange, status, scene, markDirty }
+  // Only an unmount may cancel a pending save.
+  React.useEffect(() => clearTimers, [])
+
+  return { onChange, status, scene, prime }
 }
