@@ -131,7 +131,8 @@ export function providerForKey(apiKey: string): Provider {
   if (apiKey.startsWith("sk-ant-")) return "anthropic"
   if (apiKey.startsWith("sk-or-")) return "openrouter"
   if (apiKey.startsWith("gsk_")) return "groq"
-  if (apiKey.startsWith("AIza")) return "google"
+  // Google AI Studio keys come as AIza… (classic) or AQ.… (newer).
+  if (apiKey.startsWith("AIza") || apiKey.startsWith("AQ.")) return "google"
   return "openai"
 }
 
