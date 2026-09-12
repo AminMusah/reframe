@@ -6,6 +6,8 @@
  *   pnpm eval                 # all fixtures
  *   pnpm eval three-tier      # one fixture
  *   pnpm eval --brief         # also generate and print the brief
+ *   pnpm eval --reps 3        # repeat each fixture; summary reports mean ± spread
+ *   pnpm eval --quiet         # only the per-run line and the summary
  *
  * Text-only: the interviewer gets the graph but no PNG (Node cannot render
  * Excalidraw). Needs ANTHROPIC_API_KEY in the env or .env.local.
@@ -88,7 +90,15 @@ const gradeSchema = z.object({
 async function main() {
   const args = process.argv.slice(2)
   const wantBrief = args.includes("--brief")
-  const only = args.filter((a) => !a.startsWith("--"))
+  const quiet = args.includes("--quiet")
+  const repsArg = args.indexOf("--reps")
+  const reps = repsArg >= 0 ? Number(args[repsArg + 1]) || 1 : 1
+  const only = args.filter(
+    (a, i) => !a.startsWith("--") && args[i - 1] !== "--reps"
+  )
+  const say = (...m: unknown[]) => {
+    if (!quiet) console.log(...m)
+  }
   const apiKey = loadKey()
   const anthropic = createAnthropic({ apiKey })
 
@@ -100,8 +110,10 @@ async function main() {
 
   fs.mkdirSync(OUT, { recursive: true })
   const results = []
-  for (const name of names) {
-    console.log(`\n=== ${name}`)
+  for (const [rep, name] of names.flatMap((n) =>
+    Array.from({ length: reps }, (_, i) => [i + 1, n] as const)
+  )) {
+    say(`\n=== ${name}${reps > 1 ? ` (rep ${rep}/${reps})` : ""}`)
     const spec: EvalSpec = JSON.parse(
       fs.readFileSync(path.join(FIXTURES, `${name}.eval.json`), "utf8")
     )
@@ -118,28 +130,43 @@ async function main() {
     let summary: string | null = null
     let endedByUser = false
 
+    let failed: string | null = null
+    let edits = 0
     while (questions < MAX_TURNS) {
-      const turn = await interviewTurn({ apiKey, graph, history, validIds })
+      let turn
+      try {
+        turn = await interviewTurn({ apiKey, graph, history, validIds })
+      } catch {
+        // One retry, then record the failure instead of aborting the whole run.
+        try {
+          turn = await interviewTurn({ apiKey, graph, history, validIds })
+        } catch (err2) {
+          failed = err2 instanceof Error ? err2.message : String(err2)
+          say(`  FAILED: ${failed}`)
+          break
+        }
+      }
       history.push({ role: "assistant", turn })
       if (turn.kind === "done") {
         summary = turn.summary
-        console.log(`  done: ${turn.summary}`)
+        say(`  done: ${turn.summary}`)
         break
       }
       if (turn.kind === "edit") {
-        // Text-only run: nothing applies the edit, so accept it nominally.
-        console.log(`  EDIT: ${turn.text} (${turn.ops.length} ops)`)
+        // Text-only run: nothing can apply the edit, so the author undoes it.
+        // Accepting would leave the model expecting ids that never appear.
+        edits++
+        say(`  EDIT (undone): ${turn.text} (${turn.ops.length} ops)`)
         history.push({
           role: "user",
-          answer: "Applied — the drawing now reflects that.",
+          answer:
+            "Undone — keep the drawing as it was; just note it for the brief.",
         })
         continue
       }
       questions++
-      console.log(`  Q${questions}: ${turn.text}`)
-      console.log(
-        `      cites ${JSON.stringify(turn.elementIds)} — ${turn.reason}`
-      )
+      say(`  Q${questions}: ${turn.text}`)
+      say(`      cites ${JSON.stringify(turn.elementIds)} — ${turn.reason}`)
 
       const reply = await simulateAuthor(anthropic, spec.intent, turn)
       let answer: string
@@ -154,7 +181,7 @@ async function main() {
       }
       answers++
       history.push({ role: "user", answer })
-      console.log(
+      say(
         `      A: ${answer}${reply.choice === null && !reply.enough ? "  [something else]" : ""}`
       )
     }
@@ -165,9 +192,14 @@ async function main() {
     const withinTurns = questions <= spec.rubric.maxTurns
     const result = {
       name,
+      rep,
       questions,
+      mustAskHit,
+      mustAskTotal: grade.mustAsk.length,
       somethingElseRate: answers ? somethingElse / answers : 0,
       endedByUser,
+      edits,
+      failed,
       finished: summary !== null,
       withinTurns,
       mustAsk: `${mustAskHit}/${grade.mustAsk.length}`,
@@ -185,10 +217,10 @@ async function main() {
         `${questions} turns${withinTurns ? "" : " (OVER LIMIT)"}, something-else ${(result.somethingElseRate * 100).toFixed(0)}%`
     )
     for (const m of grade.mustAsk) {
-      if (!m.satisfied) console.log(`     missed: ${m.topic} — ${m.evidence}`)
+      if (!m.satisfied) say(`     missed: ${m.topic} — ${m.evidence}`)
     }
     for (const m of grade.mustNotAsk) {
-      if (m.violated) console.log(`     violated: ${m.topic} — ${m.evidence}`)
+      if (m.violated) say(`     violated: ${m.topic} — ${m.evidence}`)
     }
 
     if (wantBrief) {
@@ -203,11 +235,47 @@ async function main() {
   const file = path.join(OUT, `${stamp}.json`)
   fs.writeFileSync(file, JSON.stringify(results, null, 2))
 
+  if (reps > 1) {
+    console.log(`\n=== aggregate over ${reps} reps (sum per rep, mean ± sd)`)
+    const repIds = [...new Set(results.map((r) => r.rep))]
+    const stat = (f: (r: (typeof results)[number]) => number) => {
+      const per = repIds.map((k) =>
+        results.filter((r) => r.rep === k).reduce((a, r) => a + f(r), 0)
+      )
+      const mean = per.reduce((a, b) => a + b, 0) / per.length
+      const sd = Math.sqrt(
+        per.reduce((a, b) => a + (b - mean) ** 2, 0) /
+          Math.max(1, per.length - 1)
+      )
+      return `${mean.toFixed(1)} ± ${sd.toFixed(1)}  (${per.map((v) => +v.toFixed(2)).join(", ")})`
+    }
+    const total = names.length * (results[0]?.mustAskTotal ?? 0)
+    console.log(`must-ask hits (of ${total}): ${stat((r) => r.mustAskHit)}`)
+    console.log(`violations:            ${stat((r) => r.violations)}`)
+    console.log(`total turns:           ${stat((r) => r.questions)}`)
+    console.log(
+      `fixtures over limit:   ${stat((r) => (r.withinTurns ? 0 : 1))}`
+    )
+    console.log(`unfinished:            ${stat((r) => (r.finished ? 0 : 1))}`)
+    console.log(`edits proposed:        ${stat((r) => r.edits)}`)
+    console.log(`failed runs:           ${stat((r) => (r.failed ? 1 : 0))}`)
+    console.log(`something-else (sum):  ${stat((r) => r.somethingElseRate)}`)
+    for (const n of names) {
+      console.log(
+        `  ${n.padEnd(14)} ${results
+          .filter((r) => r.name === n)
+          .map((r) => `${r.mustAskHit}/${r.mustAskTotal} ${r.questions}t`)
+          .join(" | ")}`
+      )
+    }
+  }
+
   console.log("\n=== summary")
   console.table(
     results.map(
       ({
         name,
+        rep,
         questions,
         mustAsk,
         violations,
@@ -216,7 +284,7 @@ async function main() {
         somethingElseRate,
         finished,
       }) => ({
-        fixture: name,
+        fixture: reps > 1 ? `${name} #${rep}` : name,
         turns: questions,
         mustAsk,
         violations,
