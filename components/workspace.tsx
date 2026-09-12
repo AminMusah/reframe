@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import * as React from "react"
 
 import { Canvas } from "@/components/canvas"
+import { InterviewPanel } from "@/components/interview-panel"
 import { ProjectMenu } from "@/components/project-menu"
 import { Button } from "@/components/ui/button"
 import {
@@ -48,7 +49,6 @@ function Project({ projectId }: { projectId: Id<"projects"> }) {
   }, [])
 
   if (!project) return null
-  const nodeCount = scene?.graph.nodes.length ?? 0
 
   return (
     <div className="flex h-dvh flex-col">
@@ -74,14 +74,11 @@ function Project({ projectId }: { projectId: Id<"projects"> }) {
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize="35" minSize="20" collapsible>
-          <aside className="flex h-full flex-col gap-3 p-4">
-            <Button disabled={nodeCount === 0}>Reframe</Button>
-            <p className="text-xs text-muted-foreground">
-              {nodeCount === 0
-                ? "Draw something, then click Reframe."
-                : `${nodeCount} element${nodeCount === 1 ? "" : "s"} ready. The interview arrives in the next step.`}
-            </p>
-          </aside>
+          <InterviewPanel
+            projectId={projectId}
+            scene={scene}
+            excalidrawApi={apiRef}
+          />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
