@@ -103,17 +103,19 @@ const gradeSchema = z.object({
   ),
   groundedInDrawing: z
     .number()
+    .int()
     .min(0)
     .max(10)
     .describe(
-      "How well questions and reasons refer to concrete elements of the drawing."
+      "Integer 0-10: how well questions and reasons refer to concrete elements of the drawing."
     ),
   optionQuality: z
     .number()
+    .int()
     .min(0)
     .max(10)
     .describe(
-      "Are options concrete, distinct, and likely to contain the author's answer?"
+      "Integer 0-10: are options concrete, distinct, and likely to contain the author's answer?"
     ),
   notes: z.string(),
 })
