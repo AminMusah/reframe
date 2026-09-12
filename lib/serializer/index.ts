@@ -11,8 +11,8 @@ export type * from "./types"
 export function serializeScene(
   elements: readonly ExcalidrawElement[]
 ): SerializedScene {
-  const { graph, idMap } = buildGraph(elements)
-  return { text: formatGraph(graph), idMap, graph }
+  const { graph, idMap, boxes } = buildGraph(elements)
+  return { text: formatGraph(graph), idMap, graph, boxes }
 }
 
 /** Stable hash of the serialized text — the interview's `sceneHash`. */

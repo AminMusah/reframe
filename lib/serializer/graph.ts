@@ -57,6 +57,7 @@ const PREFIX: Record<NodeKind, string> = {
 export function buildGraph(elements: readonly ExcalidrawElement[]): {
   graph: SceneGraph
   idMap: Record<string, string>
+  boxes: Record<string, Box>
 } {
   const live = elements.filter((e) => !e.isDeleted && e.type !== "selection")
   const byId = new Map(live.map((e) => [e.id, e]))
@@ -280,7 +281,11 @@ export function buildGraph(elements: readonly ExcalidrawElement[]): {
     .sort((a, b) => compareIds(a.members[0], b.members[0]))
     .map((g) => ({ id: assign("g", g.sourceId), ...g }))
 
-  return { graph: { frames, nodes, arrows, groups }, idMap }
+  const boxes: Record<string, Box> = {}
+  for (const f of frames) boxes[f.id] = frameBoxes.get(f.sourceId)!
+  for (const [id, box] of boxOfNode) boxes[id] = box
+
+  return { graph: { frames, nodes, arrows, groups }, idMap, boxes }
 }
 
 /**

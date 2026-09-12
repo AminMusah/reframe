@@ -76,4 +76,6 @@ export type SerializedScene = {
   /** Short id → Excalidraw element id (groups map to group ids). */
   idMap: Record<string, string>
   graph: SceneGraph
+  /** Scene-pixel boxes of nodes and frames by short id — for placing agent edits. Never sent to the model. */
+  boxes: Record<string, Box>
 }

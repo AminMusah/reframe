@@ -1,5 +1,6 @@
 "use client"
 
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types"
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types"
 import { useAction, useMutation, useQuery } from "convex/react"
 import * as React from "react"
@@ -11,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/convex/_generated/api"
 import type { Doc, Id } from "@/convex/_generated/dataModel"
+import { applyEdit, describeOp } from "@/lib/edits/apply"
 import { useApiKey, useModel } from "@/lib/llm-settings"
 import {
   hashScene,
@@ -38,6 +40,8 @@ export function InterviewPanel({
   const [model] = useModel()
   const start = useMutation(api.interviews.start)
   const finish = useMutation(api.interviews.finish)
+  const rebase = useMutation(api.interviews.rebase)
+  const rejectEdit = useMutation(api.interviews.rejectEdit)
   const generateUploadUrl = useMutation(api.projects.generateUploadUrl)
   const step = useAction(api.interviewActions.step)
   const [busy, setBusy] = React.useState(false)
@@ -46,8 +50,136 @@ export function InterviewPanel({
   const [ignoredHash, setIgnoredHash] = React.useState<string | null>(null)
 
   const currentQuestion = interview ? lastQuestion(interview.turns) : null
+  const lastTurn = interview?.turns[interview.turns.length - 1]
+  const pendingEdit =
+    interview?.status === "awaiting_answer" &&
+    lastTurn?.role === "assistant" &&
+    lastTurn.kind === "edit"
+      ? lastTurn
+      : null
+  const editKey = pendingEdit ? interview!.turns.length : null
+  // While an edit is pending the canvas legitimately differs from the pinned hash.
   const drawingChanged =
-    !!interview && !!sceneHash && interview.sceneHash !== sceneHash
+    !!interview &&
+    !!sceneHash &&
+    interview.sceneHash !== sceneHash &&
+    !pendingEdit
+
+  // Agent edits: applied to the canvas as soon as they arrive, then Accept / Undo.
+  // `decided` stays set until the next turn arrives, so the apply effect
+  // cannot fire a second time while the answer is in flight.
+  const [editState, setEditState] = React.useState<{
+    key: number
+    snapshot: readonly ExcalidrawElement[]
+    skipped: string[]
+    decided: boolean
+  } | null>(null)
+
+  const applyPending = async () => {
+    const excalidraw = excalidrawApi.current
+    if (!excalidraw || !pendingEdit || editKey === null) return
+    const { convertToExcalidrawElements, CaptureUpdateAction } =
+      await import("@excalidraw/excalidraw")
+    const elements = excalidraw.getSceneElements()
+    const serialized = serializeScene(elements)
+    const result = applyEdit({
+      elements,
+      ops: pendingEdit.ops,
+      idMap: serialized.idMap,
+      boxes: serialized.boxes,
+      convert: convertToExcalidrawElements,
+    })
+    excalidraw.updateScene({
+      elements: result.elements,
+      appState: {
+        selectedElementIds: Object.fromEntries(
+          result.changedIds.map((id) => [id, true])
+        ),
+      },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    })
+    const changed = excalidraw
+      .getSceneElements()
+      .filter((el) => result.changedIds.includes(el.id))
+    if (changed.length > 0) {
+      void excalidraw.setViewport({
+        target: changed,
+        fit: "scale-down",
+        animation: true,
+      })
+    }
+    setEditState({
+      key: editKey,
+      snapshot: elements,
+      skipped: result.skipped,
+      decided: false,
+    })
+  }
+  // The trigger is a query update (an external system); apply runs on the next
+  // tick through a ref so the effect itself stays free of state changes.
+  const applyRef = React.useRef(applyPending)
+  React.useEffect(() => {
+    applyRef.current = applyPending
+  })
+  const appliedKey = editState?.key ?? null
+  React.useEffect(() => {
+    if (editKey !== null && appliedKey !== editKey) {
+      const t = setTimeout(() => void applyRef.current(), 0)
+      return () => clearTimeout(t)
+    }
+  }, [editKey, appliedKey])
+
+  const acceptEdit = async () => {
+    const excalidraw = excalidrawApi.current
+    if (!excalidraw || !interview || !apiKey) return
+    setBusy(true)
+    try {
+      const elements = excalidraw.getSceneElements()
+      const serialized = serializeScene(elements)
+      const newHash = await hashScene(serialized.text)
+      const pngFileId = await exportPng(excalidraw, generateUploadUrl)
+      await rebase({
+        id: interview._id,
+        sceneHash: newHash,
+        graph: serialized.text,
+        pngFileId,
+      })
+      setEditState((st) => (st ? { ...st, decided: true } : st))
+      await step({
+        interviewId: interview._id,
+        apiKey,
+        answer: `Applied. The drawing is now:
+
+${serialized.text}`,
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const undoEdit = async () => {
+    const excalidraw = excalidrawApi.current
+    if (!excalidraw || !interview || !apiKey) return
+    setBusy(true)
+    try {
+      if (editState) {
+        const { CaptureUpdateAction } = await import("@excalidraw/excalidraw")
+        excalidraw.updateScene({
+          elements: editState.snapshot,
+          captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+        })
+      }
+      await rejectEdit({ id: interview._id })
+      setEditState((st) => (st ? { ...st, decided: true } : st))
+      await step({
+        interviewId: interview._id,
+        apiKey,
+        answer: "Undone — keep the drawing as it was.",
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
 
   // Highlight the elements a question cites, if the drawing still matches.
   useHighlight(
@@ -156,7 +288,46 @@ export function InterviewPanel({
           </p>
         )}
 
-        {interview?.status === "awaiting_answer" && (
+        {pendingEdit && (
+          <div className="space-y-3 rounded-md border p-3 text-sm">
+            <p className="font-medium">✎ {pendingEdit.text}</p>
+            <ul className="list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
+              {pendingEdit.ops.map((op, i) => (
+                <li key={i}>{describeOp(op)}</li>
+              ))}
+            </ul>
+            {editState?.skipped.length ? (
+              <p className="text-xs text-destructive">
+                Skipped: {editState.skipped.join("; ")}
+              </p>
+            ) : null}
+            <div className="flex gap-2">
+              {editState?.key === editKey && editState.decided ? (
+                <Spinner />
+              ) : editState?.key === editKey ? (
+                <>
+                  <Button size="sm" onClick={acceptEdit} disabled={busy}>
+                    Accept
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={undoEdit}
+                    disabled={busy}
+                  >
+                    Undo
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" onClick={applyPending} disabled={busy}>
+                  Apply to drawing
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {interview?.status === "awaiting_answer" && !pendingEdit && (
           <QuestionCard
             key={interview.turns.length}
             question={currentQuestion}
@@ -225,7 +396,7 @@ function Transcript({ turns }: { turns: Turn[] }) {
   // Everything except the question currently being asked.
   const last = turns[turns.length - 1]
   const settled =
-    last && last.role === "assistant" && last.kind === "question"
+    last && last.role === "assistant" && last.kind !== "done"
       ? turns.slice(0, -1)
       : turns
   if (settled.length === 0) return null
@@ -237,6 +408,11 @@ function Transcript({ turns }: { turns: Turn[] }) {
             <p className="rounded-md bg-accent px-3 py-2">{t.answer}</p>
           ) : t.kind === "question" ? (
             <p className="text-muted-foreground">{t.text}</p>
+          ) : t.kind === "edit" ? (
+            <p className="text-muted-foreground">
+              ✎ {t.text}
+              {t.applied === false && " (undone)"}
+            </p>
           ) : (
             <p className="rounded-md border px-3 py-2">{t.summary}</p>
           )}

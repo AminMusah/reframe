@@ -9,9 +9,9 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server"
-import { doneTurn, errorCode, questionTurn } from "./schema"
+import { doneTurn, editTurn, errorCode, questionTurn } from "./schema"
 
-const assistantTurn = v.union(questionTurn, doneTurn)
+const assistantTurn = v.union(questionTurn, editTurn, doneTurn)
 
 async function requireUserId(ctx: QueryCtx | MutationCtx): Promise<string> {
   const user = await authComponent.getAuthUser(ctx)
@@ -155,6 +155,43 @@ export const appendAssistantTurn = internalMutation({
     })
   },
 })
+
+/**
+ * An accepted agent edit becomes the interview's new baseline: the pinned
+ * hash, graph, and PNG move to the edited drawing, so no restart is needed.
+ */
+export const rebase = mutation({
+  args: {
+    id: v.id("interviews"),
+    sceneHash: v.string(),
+    graph: v.string(),
+    pngFileId: v.optional(v.id("_storage")),
+  },
+  handler: async (ctx, { id, sceneHash, graph, pngFileId }) => {
+    const interview = await ownedInterview(ctx, id)
+    await ctx.db.patch(id, {
+      sceneHash,
+      graph,
+      ...(pngFileId ? { pngFileId } : {}),
+      turns: markLastEdit(interview.turns, true),
+    })
+  },
+})
+
+/** The author undid the edit; record it so the transcript shows the decision. */
+export const rejectEdit = mutation({
+  args: { id: v.id("interviews") },
+  handler: async (ctx, { id }) => {
+    const interview = await ownedInterview(ctx, id)
+    await ctx.db.patch(id, { turns: markLastEdit(interview.turns, false) })
+  },
+})
+
+function markLastEdit(turns: Doc<"interviews">["turns"], applied: boolean) {
+  const last = turns[turns.length - 1]
+  if (!last || last.role !== "assistant" || last.kind !== "edit") return turns
+  return [...turns.slice(0, -1), { ...last, applied }]
+}
 
 export const setError = internalMutation({
   args: { id: v.id("interviews"), code: errorCode },

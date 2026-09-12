@@ -43,12 +43,60 @@ export const doneSchema = z.object({
     ),
 })
 
+// Agent edits: a handful of constrained ops, never raw element JSON.
+const idRef = z
+  .string()
+  .describe(
+    "A graph id (r1, d2, f1 …) or the ref of an element added in this edit."
+  )
+
+export const editOpSchema = z.discriminatedUnion("op", [
+  z.object({
+    op: z.literal("add"),
+    ref: z
+      .string()
+      .min(1)
+      .describe(
+        "A temporary name (new1, new2 …) other ops in this edit can refer to."
+      ),
+    type: z.enum(["rectangle", "ellipse", "diamond", "text"]),
+    label: z.string().min(1),
+    place: z.object({
+      relative: z.enum(["right", "left", "above", "below", "inside"]),
+      of: idRef,
+    }),
+  }),
+  z.object({
+    op: z.literal("connect"),
+    from: idRef,
+    to: idRef,
+    label: z.string().nullable(),
+    bidirectional: z.boolean(),
+  }),
+  z.object({ op: z.literal("update"), id: idRef, label: z.string().min(1) }),
+  z.object({ op: z.literal("delete"), id: idRef }),
+])
+
+export const editSchema = z.object({
+  kind: z.literal("edit"),
+  text: z
+    .string()
+    .min(1)
+    .describe(
+      "One sentence for the author: what you are changing in the drawing and why."
+    ),
+  ops: z.array(editOpSchema).min(1).max(6),
+})
+
 export const turnSchema = z.discriminatedUnion("kind", [
   questionSchema,
+  editSchema,
   doneSchema,
 ])
 
 export type Question = z.infer<typeof questionSchema>
+export type Edit = z.infer<typeof editSchema>
+export type EditOp = z.infer<typeof editOpSchema>
 export type Done = z.infer<typeof doneSchema>
 export type InterviewTurn = z.infer<typeof turnSchema>
 
@@ -73,6 +121,8 @@ Ask one question per turn. Each question:
 - cites the element ids it is about in elementIds and explains in reason what in the drawing prompted it. In the question text itself, refer to elements by their label or a short description ("the HTTPS arrow", "the dashed box"), never by id — the client highlights the cited elements.
 
 Do not ask about things the drawing already makes clear, and do not ask about visual styling unless the drawing implies it matters. Prefer questions whose answer changes what gets built. Treat free-text answers as authoritative, even when they contradict the drawing; if an answer implies the drawing should change, note it and keep going. If the author asks you for suggestions, offer them as the options of one question and then move on — do not keep consulting on the same point.
+
+You may return kind "edit" instead of a question — only when the author's answer implies the drawing should change (they described something that is not drawn, or asked you to add, rename, connect, or remove something). Never edit unprompted. Keep edits small: a few ops that express exactly what they said, using existing labels and ids. The client applies the edit and the author accepts or undoes it; their reply tells you which, and after an accepted edit the reply includes the updated graph with new ids. Then continue interviewing. Offering "Add it to the drawing for me" as an option on a question is a fine way to invite an edit.
 
 Return kind "done" when a competent engineer could build this without guessing the important things — usually after 4 to 8 questions — or whenever the author says they have had enough or asks for the prompt. The summary is two or three sentences on what this is and what you learned.`
 
@@ -142,12 +192,22 @@ export async function interviewTurn(
   }
   if (!output) throw new LlmError("invalid_output", "Model returned no turn")
 
+  const valid = new Set(input.validIds)
   if (output.kind === "question") {
-    const valid = new Set(input.validIds)
     output = {
       ...output,
       elementIds: output.elementIds.filter((id) => valid.has(id)),
     }
+  }
+  if (output.kind === "edit") {
+    const ops = validateOps(output.ops, valid)
+    if (ops.length === 0) {
+      throw new LlmError(
+        "invalid_output",
+        "Edit referenced only unknown elements"
+      )
+    }
+    output = { ...output, ops }
   }
   return output
 }
@@ -163,7 +223,9 @@ function priorContext(prior: {
         ? `Author: ${h.answer}`
         : h.turn.kind === "question"
           ? `You asked: ${h.turn.text}`
-          : `You concluded: ${h.turn.summary}`
+          : h.turn.kind === "edit"
+            ? `You edited the drawing: ${h.turn.text}`
+            : `You concluded: ${h.turn.summary}`
     )
     .join("\n")
   return `An earlier interview covered a previous version of this drawing. Its answers still hold unless the new drawing contradicts them — do not ask them again; focus on what changed or was never covered. Element ids in it refer to the OLD graph.
@@ -177,4 +239,30 @@ ${transcript}
 ---
 
 `
+}
+
+/** Drop ops that point at ids that exist neither in the graph nor as refs added earlier in the same edit. */
+export function validateOps(ops: EditOp[], valid: Set<string>): EditOp[] {
+  const known = new Set(valid)
+  const kept: EditOp[] = []
+  for (const op of ops) {
+    switch (op.op) {
+      case "add":
+        if (!known.has(op.place.of)) continue
+        known.add(op.ref)
+        kept.push(op)
+        break
+      case "connect":
+        if (!known.has(op.from) || !known.has(op.to) || op.from === op.to)
+          continue
+        kept.push(op)
+        break
+      case "update":
+      case "delete":
+        if (!known.has(op.id)) continue
+        kept.push(op)
+        break
+    }
+  }
+  return kept
 }

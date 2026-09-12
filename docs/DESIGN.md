@@ -140,18 +140,18 @@ Scenes and PNGs go in file storage (docs are capped at 1 MB). Turns live as an a
 | 7   | Better Auth (anonymous + GitHub/Google), BYOK key, model dropdown                                 | v1     |
 | 8   | Scene-changed banner → restart                                                                    | v1     |
 | 9   | Fixture evals + serializer unit tests                                                             | v1     |
-| 10  | Agent `edit` turn with Accept / Undo                                                              | v1.1   |
+| 10  | Agent `edit` turn with Accept / Undo                                                              | ✅ v1.1 |
 | 11  | Restart carrying previous answers as context                                                      | ✅ v1.1 |
 | 12  | Multiple briefs per interview (regenerate, per-target)                                            | ✅ v1.1 |
 | 13  | OpenAI / Gemini providers                                                                         | later  |
 | 14  | Public share links                                                                                | later  |
 
-### Agent edits (v1.1)
+### Agent edits (v1.1) — built
 
-- Turn kind `edit` with constrained ops: `add(skeleton)`, `update(id, patch)`, `connect(from, to)`, `delete(id)`. No raw element JSON.
-- Applied via `convertToExcalidrawElements` + `excalidrawAPI.updateScene({ elements, captureUpdate })` so Ctrl+Z works.
-- Apply immediately, select + scroll to the changed elements, then **Accept / Undo** in the panel.
-- Only in response to something the user said (or as an option on a question) — never unprompted.
+- Turn kind `edit` = `{ text, ops }`, 1–6 ops: `add { ref, type: rectangle|ellipse|diamond|text, label, place: { relative: right|left|above|below|inside, of } }`, `connect { from, to, label, bidirectional }`, `update { id, label }`, `delete { id }`. Ids are graph ids or refs added earlier in the same edit; the module drops ops with unknown ids and rejects an edit with none left.
+- `lib/edits/apply.ts` (client, pure over `(elements, ops, idMap, boxes, convert)`): new shapes via `convertToExcalidrawElements` with ids we pick; placement is next to the anchor, stepping outward until it overlaps nothing of similar size; arrows are bound by hand (`startBinding`/`endBinding` + `boundElements`) because the converter only binds within one call; `update` rebuilds the shape under the same id so bindings survive; `delete` also unbinds arrows and detaches frame children. The serializer exposes `boxes` (pixel boxes by short id) for this.
+- Panel applies on arrival with `CaptureUpdateAction.IMMEDIATELY` (so Ctrl+Z works too), selects + scrolls to the changed elements, shows the ops in words with **Accept / Undo**. Accept re-serializes, re-exports the PNG, and `interviews.rebase`s hash/graph/PNG so no banner appears, then answers "Applied. The drawing is now: <graph>"; Undo restores the pre-edit snapshot and answers "Undone". The decision is kept in state until the next turn so the apply effect cannot fire twice. The banner is suppressed while an edit is pending.
+- Prompt: edits only when the author's answer implies a drawing change; never unprompted; "Add it to the drawing for me" is a legitimate option to offer.
 
 ## Build order (v1)
 

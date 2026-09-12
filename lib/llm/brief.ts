@@ -61,6 +61,9 @@ export async function generateBrief(input: BriefInput): Promise<string> {
       if (entry.turn.kind === "question") {
         return `Interviewer: ${entry.turn.text}\n  (options offered: ${entry.turn.options.join(" | ")})`
       }
+      if (entry.turn.kind === "edit") {
+        return `Interviewer (edited the drawing): ${entry.turn.text}`
+      }
       return `Interviewer (summary): ${entry.turn.summary}`
     })
     .join("\n\n")

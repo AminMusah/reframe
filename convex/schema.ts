@@ -16,12 +16,55 @@ export const doneTurn = v.object({
   summary: v.string(),
 })
 
+const idRef = v.string()
+export const editOp = v.union(
+  v.object({
+    op: v.literal("add"),
+    ref: v.string(),
+    type: v.union(
+      v.literal("rectangle"),
+      v.literal("ellipse"),
+      v.literal("diamond"),
+      v.literal("text")
+    ),
+    label: v.string(),
+    place: v.object({
+      relative: v.union(
+        v.literal("right"),
+        v.literal("left"),
+        v.literal("above"),
+        v.literal("below"),
+        v.literal("inside")
+      ),
+      of: idRef,
+    }),
+  }),
+  v.object({
+    op: v.literal("connect"),
+    from: idRef,
+    to: idRef,
+    label: v.union(v.string(), v.null()),
+    bidirectional: v.boolean(),
+  }),
+  v.object({ op: v.literal("update"), id: idRef, label: v.string() }),
+  v.object({ op: v.literal("delete"), id: idRef })
+)
+
+export const editTurn = v.object({
+  role: v.literal("assistant"),
+  kind: v.literal("edit"),
+  text: v.string(),
+  ops: v.array(editOp),
+  // Set once the author decides; absent while the edit is pending.
+  applied: v.optional(v.boolean()),
+})
+
 export const answerTurn = v.object({
   role: v.literal("user"),
   answer: v.string(),
 })
 
-export const turn = v.union(questionTurn, doneTurn, answerTurn)
+export const turn = v.union(questionTurn, editTurn, doneTurn, answerTurn)
 
 export const interviewStatus = v.union(
   v.literal("thinking"),

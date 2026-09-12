@@ -126,6 +126,15 @@ async function main() {
         console.log(`  done: ${turn.summary}`)
         break
       }
+      if (turn.kind === "edit") {
+        // Text-only run: nothing applies the edit, so accept it nominally.
+        console.log(`  EDIT: ${turn.text} (${turn.ops.length} ops)`)
+        history.push({
+          role: "user",
+          answer: "Applied — the drawing now reflects that.",
+        })
+        continue
+      }
       questions++
       console.log(`  Q${questions}: ${turn.text}`)
       console.log(
@@ -253,7 +262,9 @@ async function judge(
         ? `AUTHOR: ${h.answer}`
         : h.turn.kind === "question"
           ? `INTERVIEWER: ${h.turn.text}\n  options: ${h.turn.options.join(" | ")}\n  cites: ${h.turn.elementIds.join(", ")} — ${h.turn.reason}`
-          : `INTERVIEWER (done): ${h.turn.summary}`
+          : h.turn.kind === "edit"
+            ? `INTERVIEWER (edit): ${h.turn.text}`
+            : `INTERVIEWER (done): ${h.turn.summary}`
     )
     .join("\n\n")
   const { output } = await generateText({
