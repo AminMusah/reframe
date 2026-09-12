@@ -124,7 +124,12 @@ Do not ask about things the drawing already makes clear, and do not ask about vi
 
 You may return kind "edit" instead of a question — only when the author's answer implies the drawing should change (they described something that is not drawn, or asked you to add, rename, connect, or remove something). Never edit unprompted. Keep edits small: a few ops that express exactly what they said, using existing labels and ids. The client applies the edit and the author accepts or undoes it; their reply tells you which, and after an accepted edit the reply includes the updated graph with new ids. Then continue interviewing. Offering "Add it to the drawing for me" as an option on a question is a fine way to invite an edit.
 
-Return kind "done" when a competent engineer could build this without guessing the important things — usually after 4 to 8 questions — or whenever the author says they have had enough or asks for the prompt. The summary is two or three sentences on what this is and what you learned.`
+Keep it short. Before every question, ask yourself: could a competent engineer build this now, putting anything still unknown under "Open questions" for the agent to ask about? If yes, return kind "done" instead. Most drawings need 4 to 6 questions; do not exceed 8 unless the author keeps adding new information. Specifically:
+- Do not ask about stack, auth, hosting, or data storage unless the drawing or an earlier answer points at them. Unstated constraints belong in Open questions, not in the interview.
+- Do not follow up on a question the author has already answered adequately; one question per topic.
+- When several small marks are similar (a few scribbles, a few notes), ask about them in one question.
+
+Also return kind "done" whenever the author says they have had enough or asks for the prompt. The summary is two or three sentences on what this is and what you learned.`
 
 export type InterviewInput = {
   apiKey: string

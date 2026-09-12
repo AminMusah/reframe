@@ -123,7 +123,7 @@ Scenes and PNGs go in file storage (docs are capped at 1 MB). Turns live as an a
 - `fixtures/`: 5–10 `.excalidraw` files (login screen, 3-tier architecture, checkout flow, ambiguous scribble, empty canvas).
 - Per fixture, a rubric: must ask about X, must not ask about Y, must cite element IDs, must finish within N turns.
 - `scripts/eval.ts` (`pnpm eval [fixture] [--brief]`) imports `lib/llm/*` directly — no Convex deployment involved. Each `fixtures/<name>.eval.json` holds a hidden `intent` note and a `rubric` (`mustAsk`, `mustNotAsk`, `maxTurns`). A Haiku 4.5 "simulated user" answers from the intent (picking an option, writing "something else", or saying enough); Sonnet 5 grades the transcript. Text-only: the interviewer gets the graph but no PNG, since Node cannot render Excalidraw. Results land in `.eval/` (git-ignored). Run on every prompt change.
-- Baseline 2026-09-12 (Sonnet 5): 13/16 must-ask across 4 fixtures, 0 violations, grounded 8–9/10, options 8/10, 5–8 turns, something-else 0–17 %. Typical miss: a scope question ("is the schema part of this?", "does sign-up exist?").
+- Hill-climb log (Sonnet 5, 4 fixtures × 3 reps, `pnpm eval --reps 3`). Baseline: must-ask 15/16 ± 0, total turns 33.7 ± 1.5, 1.7 fixtures over their limit per rep. Round 1 (stopping discipline: per-turn "could an engineer build this now?", no unmotivated stack/auth/hosting questions, one question per topic, batch similar marks): turns 23.3 ± 1.5, 0 over limit, must-ask 14.3 ± 1.2 — kept. Typical remaining miss: scope questions being deferred to Open questions instead of asked; round 2 targets that.
 - Track the **"something else" rate** from day one — it is the primary quality metric for the interviewer.
 - Later: opt-in recording of real sessions as new fixtures.
 
