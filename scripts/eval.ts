@@ -176,6 +176,10 @@ async function main() {
 
   fs.mkdirSync(OUT, { recursive: true })
   const results: RunResult[] = []
+  // Written after every run so a killed process still leaves usable data.
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-")
+  const file = path.join(OUT, `${stamp}.json`)
+  const persist = () => fs.writeFileSync(file, JSON.stringify(results, null, 2))
   for (const [rep, name] of names.flatMap((n) =>
     Array.from({ length: reps }, (_, i) => [i + 1, n] as const)
   )) {
@@ -293,6 +297,7 @@ async function main() {
       transcript: history,
     }
     results.push(result)
+    persist()
 
     console.log(
       `  → ${result.mustAsk} must-ask, ${violations} violations, grounded ${grade.groundedInDrawing}/10, options ${grade.optionQuality}/10, ` +
@@ -313,9 +318,7 @@ async function main() {
     }
   }
 
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-")
-  const file = path.join(OUT, `${stamp}.json`)
-  fs.writeFileSync(file, JSON.stringify(results, null, 2))
+  persist()
 
   if (reps > 1) {
     console.log(`\n=== aggregate over ${reps} reps (sum per rep, mean ± sd)`)
