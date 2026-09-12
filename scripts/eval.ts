@@ -13,7 +13,7 @@
  * Text-only: the interviewer gets the graph but no PNG (Node cannot render
  * Excalidraw). Needs ANTHROPIC_API_KEY in the env or .env.local.
  */
-import { APICallError, generateText, Output } from "ai"
+import { APICallError, generateText, Output, RetryError } from "ai"
 import fs from "node:fs"
 import path from "node:path"
 import { z } from "zod"
@@ -128,10 +128,14 @@ async function withBackoff<T>(label: string, fn: () => Promise<T>): Promise<T> {
     try {
       return await fn()
     } catch (err) {
-      const status = APICallError.isInstance(err) ? err.statusCode : undefined
-      const body = APICallError.isInstance(err)
-        ? String(err.responseBody ?? "")
-        : ""
+      // The SDK retries a few times itself, then throws a RetryError around the last failure.
+      const cause = RetryError.isInstance(err) ? err.lastError : err
+      const status = APICallError.isInstance(cause)
+        ? cause.statusCode
+        : undefined
+      const body = APICallError.isInstance(cause)
+        ? String(cause.responseBody ?? "")
+        : String((cause as Error)?.message ?? "")
       const quota = status === 429 || /quota|rate limit/i.test(body)
       if (!quota || attempt > 4) throw err
       const hinted = /retryDelay"?:s*"?(d+)s/.exec(body)?.[1]
