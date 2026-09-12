@@ -121,7 +121,8 @@ Scenes and PNGs go in file storage (docs are capped at 1 MB). Turns live as an a
 
 - `fixtures/`: 5–10 `.excalidraw` files (login screen, 3-tier architecture, checkout flow, ambiguous scribble, empty canvas).
 - Per fixture, a rubric: must ask about X, must not ask about Y, must cite element IDs, must finish within N turns.
-- `scripts/eval.ts` (tsx) imports `lib/llm/*` directly — no Convex deployment involved. A Haiku 4.5 "simulated user" answers from a hidden per-fixture intent note; Sonnet 5 grades against the rubric. Run on every prompt change.
+- `scripts/eval.ts` (`pnpm eval [fixture] [--brief]`) imports `lib/llm/*` directly — no Convex deployment involved. Each `fixtures/<name>.eval.json` holds a hidden `intent` note and a `rubric` (`mustAsk`, `mustNotAsk`, `maxTurns`). A Haiku 4.5 "simulated user" answers from the intent (picking an option, writing "something else", or saying enough); Sonnet 5 grades the transcript. Text-only: the interviewer gets the graph but no PNG, since Node cannot render Excalidraw. Results land in `.eval/` (git-ignored). Run on every prompt change.
+- Baseline 2026-09-12 (Sonnet 5): 13/16 must-ask across 4 fixtures, 0 violations, grounded 8–9/10, options 8/10, 5–8 turns, something-else 0–17 %. Typical miss: a scope question ("is the schema part of this?", "does sign-up exist?").
 - Track the **"something else" rate** from day one — it is the primary quality metric for the interviewer.
 - Later: opt-in recording of real sessions as new fixtures.
 
@@ -158,7 +159,7 @@ Scenes and PNGs go in file storage (docs are capped at 1 MB). Turns live as an a
 3. `lib/llm/interview` + action + panel (options, "something else", Enough). ✅
 4. Brief action + reactive streaming + copy. ✅
 5. Highlighting, scene-changed banner, model dropdown, key dialog. ✅
-6. `scripts/eval.ts`.
+6. `scripts/eval.ts`. ✅
 7. GitHub/Google upgrade + Vercel deploy.
 
 ## Open items (decide when reached)

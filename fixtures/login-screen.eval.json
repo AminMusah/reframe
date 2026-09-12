@@ -1,0 +1,16 @@
+{
+  "intent": "A login screen for an internal admin dashboard used by ~40 staff. Email + password only; Google sign-in is a nice-to-have for later. 'Forgot password' sends a reset email. No sign-up (accounts are provisioned by IT). Stack is already decided: Next.js + Supabase auth. The sticky note about mobile means the form must be usable on phones, but there is no separate mobile design.",
+  "rubric": {
+    "mustAsk": [
+      "who the users are or what the app behind the login is",
+      "whether sign-up / account creation exists",
+      "what 'Forgot password?' does or where it leads",
+      "what the Google button does (nice-to-have vs required)"
+    ],
+    "mustNotAsk": [
+      "button colours or fonts",
+      "the exact pixel layout"
+    ],
+    "maxTurns": 8
+  }
+}

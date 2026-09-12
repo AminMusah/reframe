@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dump-graph": "tsx scripts/dump-graph.ts",
-    "convex": "convex dev"
+    "convex": "convex dev",
+    "eval": "tsx scripts/eval.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.53",

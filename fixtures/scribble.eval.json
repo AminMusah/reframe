@@ -1,0 +1,15 @@
+{
+  "intent": "A rough plan for an analytics dashboard page and a settings page. The scribble across Dashboard means 'this needs charts, not sure which yet' — the author wants the agent to propose 2-3 chart types for daily active users and revenue. The scribble near Settings is a note-to-self that Settings should be a modal, not a page. The lone scribble at the bottom is nothing (accidental). The image is a screenshot of a competitor's dashboard used as visual inspiration only. Sticky note 'not sure about this part' refers to the Dashboard content.",
+  "rubric": {
+    "mustAsk": [
+      "what the scribble through the Dashboard means",
+      "what the image is / whether it is a reference or content",
+      "what the sticky note is uncertain about",
+      "what Dashboard shows (its content or data)"
+    ],
+    "mustNotAsk": [
+      "the stroke width of the scribbles"
+    ],
+    "maxTurns": 8
+  }
+}

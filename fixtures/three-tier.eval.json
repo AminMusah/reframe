@@ -1,0 +1,16 @@
+{
+  "intent": "A read-heavy public content API. Client is a Next.js site. API is Node (Fastify) on AWS ECS Fargate inside the VPC; Postgres is RDS; Redis caches query results with a 60s TTL and is also used for rate limiting. No auth on the API for now (public data). Deploy with Terraform. Postgres schema is out of scope for this brief; the agent should only scaffold the services and wiring.",
+  "rubric": {
+    "mustAsk": [
+      "what the Redis cache is for",
+      "authentication between client and API",
+      "cloud provider or hosting for the VPC",
+      "scope: whether the database schema or data model is part of the work"
+    ],
+    "mustNotAsk": [
+      "what the dashed line style means",
+      "the arrow head style"
+    ],
+    "maxTurns": 8
+  }
+}

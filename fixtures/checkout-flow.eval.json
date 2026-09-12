@@ -1,0 +1,16 @@
+{
+  "intent": "Checkout for a small e-commerce shop. Guests may pay without logging in; the 'Logged in?' diamond decides whether to prefill address/payment details. Payment is Stripe Checkout (hosted). On failure ('fail?') the user returns to Payment with an error banner, max 3 attempts, then back to Cart. 'Done' is an order confirmation page with an email receipt. Login is email + password via the existing accounts system.",
+  "rubric": {
+    "mustAsk": [
+      "what happens on payment failure (the dangling 'fail?' arrow)",
+      "whether guests can check out without logging in",
+      "what payment provider or method is used",
+      "what 'Done' means (confirmation page, email, etc.)"
+    ],
+    "mustNotAsk": [
+      "the shape of the diamond",
+      "colours"
+    ],
+    "maxTurns": 8
+  }
+}
