@@ -18,6 +18,8 @@ const TARGETS: { id: BriefTarget; label: string }[] = [
 
 const ERROR_TEXT = {
   bad_key: "The API key was rejected.",
+  billing:
+    "The provider says this key has no remaining credit. Top up your account, then retry.",
   rate_limit: "The provider is rate-limiting this key. Try again in a moment.",
   invalid_output: "The model returned something unusable.",
   network: "Couldn't reach the model. Check your connection.",

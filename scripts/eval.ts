@@ -8,11 +8,11 @@
  *   pnpm eval --brief         # also generate and print the brief
  *   pnpm eval --reps 3        # repeat each fixture; summary reports mean ± spread
  *   pnpm eval --quiet         # only the per-run line and the summary
+ *   pnpm eval --openai        # prefer OPENAI_API_KEY when both keys are present
  *
  * Text-only: the interviewer gets the graph but no PNG (Node cannot render
  * Excalidraw). Needs ANTHROPIC_API_KEY in the env or .env.local.
  */
-import { createAnthropic } from "@ai-sdk/anthropic"
 import { generateText, Output } from "ai"
 import fs from "node:fs"
 import path from "node:path"
@@ -24,14 +24,22 @@ import {
   type HistoryEntry,
   type Question,
 } from "../lib/llm/interview"
+import { providerForKey, type ModelId } from "../lib/llm/models"
+import { languageModel } from "../lib/llm/provider"
 import { serializeScene } from "../lib/serializer"
 
 const ROOT = path.resolve(import.meta.dirname, "..")
 const FIXTURES = path.join(ROOT, "fixtures")
 const OUT = path.join(ROOT, ".eval")
 
-const SIMULATED_USER_MODEL = "claude-haiku-4-5"
-const JUDGE_MODEL = "claude-sonnet-5"
+/** Cheap author + stronger judge, per provider of the key in use. */
+const HELPERS: Record<
+  "anthropic" | "openai",
+  { author: ModelId; judge: ModelId }
+> = {
+  anthropic: { author: "claude-haiku-4-5", judge: "claude-sonnet-5" },
+  openai: { author: "gpt-5.6-luna", judge: "gpt-5.6-terra" },
+}
 /** Safety rail for the runner only; the product has no cap. */
 const MAX_TURNS = 12
 
@@ -121,7 +129,11 @@ async function main() {
     if (!quiet) console.log(...m)
   }
   const apiKey = loadKey()
-  const anthropic = createAnthropic({ apiKey })
+  const helpers = HELPERS[providerForKey(apiKey)]
+  const models = {
+    author: languageModel(apiKey, helpers.author),
+    judge: languageModel(apiKey, helpers.judge),
+  }
 
   const names = fs
     .readdirSync(FIXTURES)
@@ -189,7 +201,7 @@ async function main() {
       say(`  Q${questions}: ${turn.text}`)
       say(`      cites ${JSON.stringify(turn.elementIds)} — ${turn.reason}`)
 
-      const reply = await simulateAuthor(anthropic, spec.intent, turn)
+      const reply = await simulateAuthor(models.author, spec.intent, turn)
       let answer: string
       if (reply.enough) {
         answer = "That's enough — please write the brief now."
@@ -207,7 +219,7 @@ async function main() {
       )
     }
 
-    const grade = await judge(anthropic, spec.rubric, graph, history)
+    const grade = await judge(models.judge, spec.rubric, graph, history)
     const mustAskHit = grade.mustAsk.filter((m) => m.satisfied).length
     const violations = grade.mustNotAsk.filter((m) => m.violated).length
     const withinTurns = questions <= spec.rubric.maxTurns
@@ -321,12 +333,12 @@ async function main() {
 
 /** The author, played by a cheap model from the hidden intent note. */
 async function simulateAuthor(
-  anthropic: ReturnType<typeof createAnthropic>,
+  model: ReturnType<typeof languageModel>,
   intent: string,
   question: Question
 ) {
   const { output } = await generateText({
-    model: anthropic(SIMULATED_USER_MODEL),
+    model,
     instructions: `You are the author of a diagram, answering an interviewer's questions about it. Your real intent is described below; answer only from it. Pick an option when one matches your intent; otherwise write a short free-text answer (one or two sentences) as "text". If the interviewer has clearly covered everything in your intent already, or asks something irrelevant twice, set enough=true. Never reveal that you have an intent note.
 
 Your intent:
@@ -340,7 +352,7 @@ ${intent}`,
 
 /** The grader: rubric + transcript in, structured findings out. */
 async function judge(
-  anthropic: ReturnType<typeof createAnthropic>,
+  model: ReturnType<typeof languageModel>,
   rubric: Rubric,
   graph: string,
   history: HistoryEntry[]
@@ -357,7 +369,7 @@ async function judge(
     )
     .join("\n\n")
   const { output } = await generateText({
-    model: anthropic(JUDGE_MODEL),
+    model,
     instructions:
       "You grade an interviewer that asks a diagram's author questions so a coding agent can build what was drawn. Be strict and cite evidence from the transcript. A must-ask topic counts as satisfied only if a question clearly addresses it (not merely an option in passing).",
     prompt: `The drawing as a graph:\n${graph}\n\nRubric:\nmust ask about: ${rubric.mustAsk.map((t) => `- ${t}`).join("\n")}\nmust NOT ask about: ${rubric.mustNotAsk.map((t) => `- ${t}`).join("\n")}\n\nTranscript:\n${transcript}`,
@@ -367,16 +379,27 @@ async function judge(
   return output
 }
 
+/** ANTHROPIC_API_KEY or OPENAI_API_KEY from the env or .env.local; `--openai` prefers the latter. */
 function loadKey(): string {
-  if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY
+  const preferOpenAI = process.argv.includes("--openai")
+  const names = preferOpenAI
+    ? ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
+    : ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"]
+  let env = ""
   try {
-    const env = fs.readFileSync(path.join(ROOT, ".env.local"), "utf8")
-    const m = env.match(/^ANTHROPIC_API_KEY=(.+)$/m)
-    if (m) return m[1].trim()
+    env = fs.readFileSync(path.join(ROOT, ".env.local"), "utf8")
   } catch {
-    // fall through
+    // no .env.local
   }
-  console.error("ANTHROPIC_API_KEY is not set (env or .env.local)")
+  for (const name of names) {
+    const fromEnv = process.env[name]
+    if (fromEnv) return fromEnv
+    const m = env.match(new RegExp("^" + name + "=(.+)$", "m"))
+    if (m) return m[1].trim()
+  }
+  console.error(
+    "ANTHROPIC_API_KEY or OPENAI_API_KEY is not set (env or .env.local)"
+  )
   process.exit(1)
 }
 

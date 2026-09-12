@@ -1,9 +1,9 @@
-import { createAnthropic } from "@ai-sdk/anthropic"
 import { streamText, type ModelMessage } from "ai"
 
 import { classifyError } from "./errors"
 import type { HistoryEntry } from "./interview"
-import { DEFAULT_MODEL, type ModelId } from "./models"
+import type { ModelId } from "./models"
+import { languageModel } from "./provider"
 
 // Pure: no Convex imports. The action streams this into the briefs doc; the
 // eval runner calls it directly.
@@ -52,8 +52,7 @@ export type BriefInput = {
 
 /** Stream the brief body (without the appendix). Resolves to the full text. */
 export async function generateBrief(input: BriefInput): Promise<string> {
-  const anthropic = createAnthropic({ apiKey: input.apiKey })
-  const model = anthropic(input.model ?? DEFAULT_MODEL)
+  const model = languageModel(input.apiKey, input.model)
 
   const transcript = input.transcript
     .map((entry) => {

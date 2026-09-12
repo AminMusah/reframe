@@ -378,6 +378,8 @@ ${serialized.text}`,
 
 const ERROR_TEXT: Record<NonNullable<Interview["lastError"]>, string> = {
   bad_key: "The API key was rejected.",
+  billing:
+    "The provider says this key has no remaining credit. Top up your account, then retry.",
   rate_limit: "The provider is rate-limiting this key. Try again in a moment.",
   invalid_output:
     "The model returned something unusable. Retry usually fixes it.",

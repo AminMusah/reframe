@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { useApiKey, useModel } from "@/lib/llm-settings"
-import { isModelId, MODELS } from "@/lib/llm/models"
+import { isModelId, modelsFor, providerForKey } from "@/lib/llm/models"
 
 /** Header controls: model for the next interview, and the BYOK key. */
 export function SettingsMenu() {
@@ -32,7 +32,7 @@ export function SettingsMenu() {
           if (isModelId(e.target.value)) setModel(e.target.value)
         }}
       >
-        {MODELS.map((m) => (
+        {modelsFor(providerForKey(apiKey ?? "")).map((m) => (
           <NativeSelectOption key={m.id} value={m.id}>
             {m.label}
           </NativeSelectOption>
@@ -49,9 +49,10 @@ export function SettingsMenu() {
         />
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Anthropic API key</DialogTitle>
+            <DialogTitle>API key</DialogTitle>
             <DialogDescription>
-              Bring your own key; usage is billed to your account.
+              Anthropic (sk-ant-…) or OpenAI (sk-…). Bring your own key; usage
+              is billed to your account.
             </DialogDescription>
           </DialogHeader>
           <KeyForm

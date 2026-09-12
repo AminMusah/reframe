@@ -2,7 +2,13 @@
 
 import * as React from "react"
 
-import { DEFAULT_MODEL, isModelId, type ModelId } from "@/lib/llm/models"
+import {
+  DEFAULT_MODEL,
+  isModelId,
+  providerForKey,
+  providerOf,
+  type ModelId,
+} from "@/lib/llm/models"
 
 // BYOK: the key lives in localStorage only and is sent per request to the
 // Convex action, which never stores it (see DESIGN.md).
@@ -47,12 +53,22 @@ export function useApiKey(): [string | null, (key: string | null) => void] {
   return [key, (value) => write(KEY, value?.trim() || null)]
 }
 
+/** The chosen model, constrained to the provider the stored key belongs to. */
 export function useModel(): [ModelId, (model: ModelId) => void] {
   const stored = React.useSyncExternalStore(
     subscribe,
     () => read(MODEL),
     () => null
   )
-  const model = stored && isModelId(stored) ? stored : DEFAULT_MODEL
+  const key = React.useSyncExternalStore(
+    subscribe,
+    () => read(KEY),
+    () => null
+  )
+  const provider = providerForKey(key ?? "")
+  const model =
+    stored && isModelId(stored) && providerOf(stored) === provider
+      ? stored
+      : DEFAULT_MODEL[provider]
   return [model, (value) => write(MODEL, value)]
 }

@@ -1,6 +1,7 @@
 import { APICallError, NoObjectGeneratedError } from "ai"
 
-export type ErrorCode = "bad_key" | "rate_limit" | "invalid_output" | "network"
+export type ErrorCode =
+  "bad_key" | "billing" | "rate_limit" | "invalid_output" | "network"
 
 export class LlmError extends Error {
   constructor(
@@ -20,6 +21,11 @@ export function classifyError(err: unknown): LlmError {
   if (APICallError.isInstance(err)) {
     if (err.statusCode === 401 || err.statusCode === 403) {
       return new LlmError("bad_key", "The API key was rejected")
+    }
+    const body = String(err.responseBody ?? "")
+    // Anthropic: 400 "credit balance is too low"; OpenAI: 429 insufficient_quota.
+    if (/credit balance|insufficient_quota|billing/i.test(body)) {
+      return new LlmError("billing", "The provider reports no remaining credit")
     }
     if (err.statusCode === 429) {
       return new LlmError("rate_limit", "Rate limited by the provider")

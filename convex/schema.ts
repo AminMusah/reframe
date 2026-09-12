@@ -87,6 +87,7 @@ export const briefStatus = v.union(
 
 export const errorCode = v.union(
   v.literal("bad_key"),
+  v.literal("billing"),
   v.literal("rate_limit"),
   v.literal("invalid_output"),
   v.literal("network")

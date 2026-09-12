@@ -28,17 +28,17 @@ export function KeyForm({
         {rejected
           ? "That key was rejected — try another."
           : hasKey
-            ? "Replace your Anthropic API key"
-            : "Add your Anthropic API key"}
+            ? "Replace your API key"
+            : "Add your API key"}
       </p>
       <p className="text-xs text-muted-foreground">
-        It stays in this browser and is sent only with each request. It is never
-        stored on the server.
+        Anthropic (sk-ant-…) or OpenAI (sk-…). It stays in this browser and is
+        sent only with each request. It is never stored on the server.
       </p>
       <Input
         type="password"
         autoComplete="off"
-        placeholder="sk-ant-…"
+        placeholder="sk-ant-… or sk-…"
         value={value}
         onChange={(e) => setValue(e.target.value)}
       />
