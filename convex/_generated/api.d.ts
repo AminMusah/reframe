@@ -9,6 +9,9 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as briefActions from "../briefActions.js";
+import type * as briefs from "../briefs.js";
+import type * as helpers from "../helpers.js";
 import type * as http from "../http.js";
 import type * as interviewActions from "../interviewActions.js";
 import type * as interviews from "../interviews.js";
@@ -22,6 +25,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  briefActions: typeof briefActions;
+  briefs: typeof briefs;
+  helpers: typeof helpers;
   http: typeof http;
   interviewActions: typeof interviewActions;
   interviews: typeof interviews;

@@ -30,6 +30,12 @@ export const interviewStatus = v.union(
   v.literal("error")
 )
 
+export const briefStatus = v.union(
+  v.literal("streaming"),
+  v.literal("done"),
+  v.literal("error")
+)
+
 export const errorCode = v.union(
   v.literal("bad_key"),
   v.literal("rate_limit"),
@@ -63,4 +69,15 @@ export default defineSchema({
     turns: v.array(turn),
     createdAt: v.number(),
   }).index("by_project_and_createdAt", ["projectId", "createdAt"]),
+
+  // Streamed by the brief action: `text` grows every ~250 ms until `done`.
+  briefs: defineTable({
+    interviewId: v.id("interviews"),
+    ownerId: v.string(),
+    model: v.string(),
+    text: v.string(),
+    status: briefStatus,
+    lastError: v.optional(errorCode),
+    createdAt: v.number(),
+  }).index("by_interview_and_createdAt", ["interviewId", "createdAt"]),
 })

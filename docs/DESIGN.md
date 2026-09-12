@@ -156,7 +156,7 @@ Scenes and PNGs go in file storage (docs are capped at 1 MB). Turns live as an a
 1. `lib/serializer` + `fixtures/` + Vitest. ✅
 2. Convex + anonymous auth + `?p=` project autosave + Excalidraw mount. ✅
 3. `lib/llm/interview` + action + panel (options, "something else", Enough). ✅
-4. Brief action + reactive streaming + copy.
+4. Brief action + reactive streaming + copy. ✅
 5. Highlighting, scene-changed banner, model dropdown, key dialog.
 6. `scripts/eval.ts`.
 7. GitHub/Google upgrade + Vercel deploy.

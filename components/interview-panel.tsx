@@ -4,6 +4,7 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types"
 import { useAction, useMutation, useQuery } from "convex/react"
 import * as React from "react"
 
+import { BriefView } from "@/components/brief-view"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
@@ -131,9 +132,7 @@ export function InterviewPanel({
         )}
 
         {interview?.status === "done" && (
-          <p className="text-xs text-muted-foreground">
-            The brief is generated in the next step.
-          </p>
+          <BriefView interviewId={interview._id} apiKey={apiKey} />
         )}
       </div>
 

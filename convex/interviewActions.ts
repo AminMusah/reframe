@@ -2,15 +2,11 @@
 
 import { ConvexError, v } from "convex/values"
 
-import {
-  InterviewError,
-  interviewTurn,
-  type HistoryEntry,
-} from "../lib/llm/interview"
+import { InterviewError, interviewTurn } from "../lib/llm/interview"
 import { isModelId } from "../lib/llm/models"
 import { api, internal } from "./_generated/api"
-import type { Id } from "./_generated/dataModel"
-import { action, type ActionCtx } from "./_generated/server"
+import { action } from "./_generated/server"
+import { graphIds, loadPng, toHistory } from "./helpers"
 
 /**
  * Run one interview turn. With `answer`, records it first (phase 1); without,
@@ -46,17 +42,6 @@ export const step = action({
     const png = interview.pngFileId
       ? await loadPng(ctx, interview.pngFileId)
       : null
-    const history: HistoryEntry[] = interview.turns.map((t) => {
-      if (t.role === "user") return { role: "user", answer: t.answer }
-      if (t.kind === "question") {
-        const { text, options, reason, elementIds } = t
-        return {
-          role: "assistant",
-          turn: { kind: "question", text, options, reason, elementIds },
-        }
-      }
-      return { role: "assistant", turn: { kind: "done", summary: t.summary } }
-    })
 
     try {
       const turn = await interviewTurn({
@@ -64,7 +49,7 @@ export const step = action({
         model: isModelId(interview.model) ? interview.model : undefined,
         graph: interview.graph,
         png,
-        history,
+        history: toHistory(interview.turns),
         validIds: graphIds(interview.graph),
       })
       await ctx.runMutation(internal.interviews.appendAssistantTurn, {
@@ -82,15 +67,3 @@ export const step = action({
     }
   },
 })
-
-async function loadPng(ctx: ActionCtx, id: Id<"_storage">) {
-  const blob = await ctx.storage.get(id)
-  if (!blob) return null
-  const base64 = Buffer.from(await blob.arrayBuffer()).toString("base64")
-  return { base64, mediaType: blob.type || "image/png" }
-}
-
-/** Every short id the serializer emitted, so cited ids can be validated. */
-function graphIds(graph: string): string[] {
-  return Array.from(graph.matchAll(/^\s*([a-z]\d+)\b/gm), (m) => m[1])
-}

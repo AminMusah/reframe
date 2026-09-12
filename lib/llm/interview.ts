@@ -1,13 +1,8 @@
 import { createAnthropic } from "@ai-sdk/anthropic"
-import {
-  APICallError,
-  generateText,
-  NoObjectGeneratedError,
-  Output,
-  type ModelMessage,
-} from "ai"
+import { generateText, Output, type ModelMessage } from "ai"
 import { z } from "zod"
 
+import { classifyError, LlmError } from "./errors"
 import { DEFAULT_MODEL, type ModelId } from "./models"
 
 // Pure: no Convex imports. The action and the eval runner both call this.
@@ -60,16 +55,7 @@ export type InterviewTurn = z.infer<typeof turnSchema>
 export type HistoryEntry =
   { role: "assistant"; turn: InterviewTurn } | { role: "user"; answer: string }
 
-export type ErrorCode = "bad_key" | "rate_limit" | "invalid_output" | "network"
-
-export class InterviewError extends Error {
-  constructor(
-    readonly code: ErrorCode,
-    message: string
-  ) {
-    super(message)
-  }
-}
+export { LlmError as InterviewError, type ErrorCode } from "./errors"
 
 export const SYSTEM_PROMPT = `You are interviewing the author of a diagram so that a coding agent (Claude Code, Cursor) can build what they drew without guessing.
 
@@ -142,10 +128,9 @@ export async function interviewTurn(
     })
     output = result.output
   } catch (err) {
-    throw classify(err)
+    throw classifyError(err)
   }
-  if (!output)
-    throw new InterviewError("invalid_output", "Model returned no turn")
+  if (!output) throw new LlmError("invalid_output", "Model returned no turn")
 
   if (output.kind === "question") {
     const valid = new Set(input.validIds)
@@ -155,25 +140,4 @@ export async function interviewTurn(
     }
   }
   return output
-}
-
-function classify(err: unknown): InterviewError {
-  if (NoObjectGeneratedError.isInstance(err)) {
-    return new InterviewError("invalid_output", err.message)
-  }
-  if (APICallError.isInstance(err)) {
-    if (err.statusCode === 401 || err.statusCode === 403) {
-      return new InterviewError("bad_key", "The API key was rejected")
-    }
-    if (err.statusCode === 429) {
-      return new InterviewError("rate_limit", "Rate limited by the provider")
-    }
-    if (err.statusCode && err.statusCode >= 400 && err.statusCode < 500) {
-      return new InterviewError("invalid_output", err.message)
-    }
-  }
-  return new InterviewError(
-    "network",
-    err instanceof Error ? err.message : String(err)
-  )
 }
