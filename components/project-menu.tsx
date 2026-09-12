@@ -1,6 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "convex/react"
+import { ConvexError } from "convex/values"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 
@@ -30,6 +31,7 @@ export function ProjectMenu({
   const create = useMutation(api.projects.create)
   const rename = useMutation(api.projects.rename)
   const [open, setOpen] = React.useState(false)
+  const [createError, setCreateError] = React.useState<string | null>(null)
 
   const openProject = (id: Id<"projects">) => {
     setOpen(false)
@@ -74,10 +76,25 @@ export function ProjectMenu({
           ))}
         </ul>
 
-        <div className="mt-auto px-4 pb-4">
+        <div className="mt-auto space-y-2 px-4 pb-4">
+          {createError && (
+            <p className="text-xs text-destructive">{createError}</p>
+          )}
           <Button
             className="w-full"
-            onClick={async () => openProject(await create({}))}
+            onClick={async () => {
+              setCreateError(null)
+              try {
+                openProject(await create({}))
+              } catch (err) {
+                setCreateError(
+                  err instanceof ConvexError
+                    ? ((err.data as { message?: string }).message ??
+                        "Couldn't create the project.")
+                    : "Couldn't create the project."
+                )
+              }
+            }}
           >
             New project
           </Button>

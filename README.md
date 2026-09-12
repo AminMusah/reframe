@@ -54,3 +54,10 @@ Use separate OAuth apps for the dev and prod deployments.
 
    `convex deploy --cmd` pushes `convex/` to prod and injects `NEXT_PUBLIC_CONVEX_URL` into the build.
 3. Update `SITE_URL` (and OAuth callback origins) whenever the Vercel domain changes.
+
+### Going-to-production checklist (OAuth)
+
+- [ ] Register a **prod** GitHub OAuth app with callback `https://<prod-deployment>.convex.site/api/auth/callback/github`; set `GITHUB_CLIENT_ID/SECRET` on the prod Convex deployment.
+- [ ] Register a **prod** Google OAuth client (same Google Cloud project is fine — the consent screen is shared): redirect URI `https://<prod-deployment>.convex.site/api/auth/callback/google`, JavaScript origins `https://<prod-deployment>.convex.site` and `https://<your-app>.vercel.app`; set `GOOGLE_CLIENT_ID/SECRET` on prod.
+- [ ] Google consent screen: click **Publish app** and confirm. Until then it is in Testing mode and only listed test users can sign in — on the live site too. With only the `openid`/`email`/`profile` scopes Better Auth requests, no verification review is needed; it takes effect immediately.
+- [ ] Projects are capped at `MAX_PROJECTS_PER_USER` (`convex/projects.ts`) since scene/PNG storage is billed to the deployment; adjust before launch if needed.

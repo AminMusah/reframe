@@ -10,6 +10,8 @@ import {
 } from "./_generated/server"
 
 const DEFAULT_NAME = "Untitled"
+/** Storage is on the deployment, not the user, so projects per user are bounded. */
+export const MAX_PROJECTS_PER_USER = 25
 
 async function requireUserId(ctx: QueryCtx | MutationCtx): Promise<string> {
   const user = await authComponent.getAuthUser(ctx)
@@ -65,6 +67,16 @@ export const create = mutation({
   args: { name: v.optional(v.string()) },
   handler: async (ctx, { name }) => {
     const userId = await requireUserId(ctx)
+    const owned = await ctx.db
+      .query("projects")
+      .withIndex("by_owner_and_updatedAt", (q) => q.eq("ownerId", userId))
+      .take(MAX_PROJECTS_PER_USER)
+    if (owned.length >= MAX_PROJECTS_PER_USER) {
+      throw new ConvexError({
+        code: "project_limit",
+        message: `You can have up to ${MAX_PROJECTS_PER_USER} projects. Rename and reuse one, or delete some first.`,
+      })
+    }
     return ctx.db.insert("projects", {
       ownerId: userId,
       name: name?.trim() || DEFAULT_NAME,
