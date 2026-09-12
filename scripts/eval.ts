@@ -219,7 +219,15 @@ async function main() {
       )
     }
 
-    const grade = await judge(models.judge, spec.rubric, graph, history)
+    let grade
+    try {
+      grade = await judge(models.judge, spec.rubric, graph, history)
+    } catch (err) {
+      console.error(
+        `judge failed for ${name}: ${err instanceof Error ? err.message.split(String.fromCharCode(10))[0] : err}`
+      )
+      process.exit(1)
+    }
     const mustAskHit = grade.mustAsk.filter((m) => m.satisfied).length
     const violations = grade.mustNotAsk.filter((m) => m.violated).length
     const withinTurns = questions <= spec.rubric.maxTurns
