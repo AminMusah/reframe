@@ -1,10 +1,9 @@
-export type Provider = "anthropic" | "openai" | "google" | "groq" | "openrouter"
+export type Provider = "anthropic" | "openai" | "google" | "openrouter"
 
 export const PROVIDER_LABEL: Record<Provider, string> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
   google: "Google",
-  groq: "Groq",
   openrouter: "OpenRouter",
 }
 
@@ -53,25 +52,6 @@ export const MODELS = [
     provider: "google",
     vision: true,
   },
-  // Groq serves text-only models at the moment; the interviewer gets the graph alone.
-  {
-    id: "openai/gpt-oss-120b",
-    label: "GPT-OSS 120B (no image)",
-    provider: "groq",
-    vision: false,
-  },
-  {
-    id: "qwen/qwen3.8-27b",
-    label: "Qwen 3.8 27B (no image)",
-    provider: "groq",
-    vision: false,
-  },
-  {
-    id: "openai/gpt-oss-20b",
-    label: "GPT-OSS 20B (no image)",
-    provider: "groq",
-    vision: false,
-  },
   {
     id: "anthropic/claude-sonnet-5",
     label: "Sonnet 5 (OpenRouter)",
@@ -110,7 +90,6 @@ export const DEFAULT_MODEL: Record<Provider, ModelId> = {
   anthropic: "claude-sonnet-5",
   openai: "gpt-5.6-terra",
   google: "gemini-3.8-flash",
-  groq: "openai/gpt-oss-120b",
   openrouter: "anthropic/claude-sonnet-5",
 }
 
@@ -130,7 +109,6 @@ export function providerOf(model: ModelId): Provider {
 export function providerForKey(apiKey: string): Provider {
   if (apiKey.startsWith("sk-ant-")) return "anthropic"
   if (apiKey.startsWith("sk-or-")) return "openrouter"
-  if (apiKey.startsWith("gsk_")) return "groq"
   // Google AI Studio keys come as AIza… (classic) or AQ.… (newer).
   if (apiKey.startsWith("AIza") || apiKey.startsWith("AQ.")) return "google"
   return "openai"

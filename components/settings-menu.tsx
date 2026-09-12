@@ -51,9 +51,9 @@ export function SettingsMenu() {
           <DialogHeader>
             <DialogTitle>API key</DialogTitle>
             <DialogDescription>
-              Anthropic (sk-ant-…), OpenAI (sk-…), OpenRouter (sk-or-…), Google
-              (AIza…) or Groq (gsk_…). Bring your own key; usage is billed to
-              your account.
+              Anthropic (sk-ant-…), OpenAI (sk-…), OpenRouter (sk-or-…) or
+              Google (AIza…). Bring your own key; usage is billed to your
+              account.
             </DialogDescription>
           </DialogHeader>
           <KeyForm

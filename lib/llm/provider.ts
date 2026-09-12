@@ -1,6 +1,5 @@
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createGoogleGenerativeAI } from "@ai-sdk/google"
-import { createGroq } from "@ai-sdk/groq"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 
@@ -30,8 +29,6 @@ export function languageModel(apiKey: string, model?: ModelId) {
       return createOpenAI({ apiKey })(id)
     case "google":
       return createGoogleGenerativeAI({ apiKey })(id)
-    case "groq":
-      return createGroq({ apiKey })(id)
     case "openrouter":
       return createOpenRouter({ apiKey })(id)
   }

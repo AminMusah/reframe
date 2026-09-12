@@ -94,7 +94,7 @@ export const turnSchema = z.union([questionSchema, editSchema, doneSchema])
 
 /**
  * What the model is asked to produce: one flat object, since providers differ
- * in what they accept at the top level (Groq: object only; OpenAI: no oneOf)
+ * in what they accept at the top level (some: object only; OpenAI: no oneOf)
  * and open models drop wrappers. It is validated into `turnSchema` afterwards.
  */
 export const flatTurnSchema = z.object({
@@ -257,9 +257,6 @@ export async function interviewTurn(
       maxRetries: 2,
       // A turn is a few hundred tokens; a cap keeps pay-per-request providers happy.
       maxOutputTokens: 4096,
-      // Groq's strict mode requires every key and open models omit the
-      // null ones; non-strict mode still sends the schema but tolerates gaps.
-      providerOptions: { groq: { strictJsonSchema: false } },
     })
     output = result.output
       ? (fromFlatTurn(result.output) ?? undefined)

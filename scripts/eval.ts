@@ -8,7 +8,7 @@
  *   pnpm eval --brief         # also generate and print the brief
  *   pnpm eval --reps 3        # repeat each fixture; summary reports mean ± spread
  *   pnpm eval --quiet         # only the per-run line and the summary
- *   pnpm eval --openai        # prefer that provider's key (also --google, --groq, --anthropic)
+ *   pnpm eval --openai        # prefer that provider's key (also --google, --openrouter, --anthropic)
  *
  * Text-only: the interviewer gets the graph but no PNG (Node cannot render
  * Excalidraw). Needs ANTHROPIC_API_KEY in the env or .env.local.
@@ -37,7 +37,6 @@ const HELPERS: Record<Provider, { author: ModelId; judge: ModelId }> = {
   anthropic: { author: "claude-haiku-4-5", judge: "claude-sonnet-5" },
   openai: { author: "gpt-5.6-luna", judge: "gpt-5.6-terra" },
   google: { author: "gemini-3.5-flash-lite", judge: "gemini-3.8-flash" },
-  groq: { author: "openai/gpt-oss-20b", judge: "openai/gpt-oss-120b" },
   openrouter: {
     author: "anthropic/claude-haiku-4.5",
     judge: "anthropic/claude-sonnet-5",
@@ -435,7 +434,6 @@ function loadKey(): string {
     anthropic: "ANTHROPIC_API_KEY",
     openai: "OPENAI_API_KEY",
     google: "GOOGLE_GENERATIVE_AI_API_KEY",
-    groq: "GROQ_API_KEY",
     openrouter: "OPENROUTER_API_KEY",
   }
   const order = (Object.keys(ENV) as Provider[]).sort((x, y) => {
