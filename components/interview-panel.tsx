@@ -5,8 +5,8 @@ import { useAction, useMutation, useQuery } from "convex/react"
 import * as React from "react"
 
 import { BriefView } from "@/components/brief-view"
+import { KeyForm } from "@/components/key-form"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/convex/_generated/api"
@@ -24,10 +24,13 @@ type Turn = Interview["turns"][number]
 export function InterviewPanel({
   projectId,
   scene,
+  sceneHash,
   excalidrawApi,
 }: {
   projectId: Id<"projects">
   scene: SerializedScene | null
+  /** Hash of what is on the canvas now; differs from the interview's once the drawing changes. */
+  sceneHash: string | null
   excalidrawApi: React.RefObject<ExcalidrawImperativeAPI | null>
 }) {
   const interview = useQuery(api.interviews.latestForProject, { projectId })
@@ -39,6 +42,21 @@ export function InterviewPanel({
   const step = useAction(api.interviewActions.step)
   const [busy, setBusy] = React.useState(false)
   const [startError, setStartError] = React.useState<string | null>(null)
+  // "Keep going" silences the banner for one particular drawing state.
+  const [ignoredHash, setIgnoredHash] = React.useState<string | null>(null)
+
+  const currentQuestion = interview ? lastQuestion(interview.turns) : null
+  const drawingChanged =
+    !!interview && !!sceneHash && interview.sceneHash !== sceneHash
+
+  // Highlight the elements a question cites, if the drawing still matches.
+  useHighlight(
+    excalidrawApi,
+    interview?.status === "awaiting_answer" && !drawingChanged
+      ? (currentQuestion?.elementIds ?? null)
+      : null,
+    scene?.idMap ?? null
+  )
 
   const nodeCount = scene?.graph.nodes.length ?? 0
 
@@ -90,10 +108,12 @@ export function InterviewPanel({
 
   if (!apiKey || interview?.lastError === "bad_key") {
     return (
-      <KeyForm
-        rejected={interview?.lastError === "bad_key"}
-        onSave={setApiKey}
-      />
+      <div className="p-4">
+        <KeyForm
+          rejected={interview?.lastError === "bad_key"}
+          onSave={setApiKey}
+        />
+      </div>
     )
   }
 
@@ -104,6 +124,24 @@ export function InterviewPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        {drawingChanged && ignoredHash !== sceneHash && (
+          <div className="space-y-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
+            <p>Drawing changed since this interview started.</p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={reframe} disabled={busy}>
+                Restart with new drawing
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setIgnoredHash(sceneHash)}
+              >
+                Keep going
+              </Button>
+            </div>
+          </div>
+        )}
+
         {interview && <Transcript turns={interview.turns} />}
 
         {interview?.status === "thinking" && (
@@ -115,7 +153,7 @@ export function InterviewPanel({
         {interview?.status === "awaiting_answer" && (
           <QuestionCard
             key={interview.turns.length}
-            question={lastQuestion(interview.turns)}
+            question={currentQuestion}
             disabled={busy}
             onAnswer={answer}
             onEnough={() => finish({ id: interview._id })}
@@ -264,45 +302,6 @@ function QuestionCard({
   )
 }
 
-function KeyForm({
-  rejected,
-  onSave,
-}: {
-  rejected: boolean
-  onSave: (key: string) => void
-}) {
-  const [value, setValue] = React.useState("")
-  return (
-    <form
-      className="space-y-3 p-4"
-      onSubmit={(e) => {
-        e.preventDefault()
-        onSave(value)
-      }}
-    >
-      <p className="text-sm font-medium">
-        {rejected
-          ? "That key was rejected — try another."
-          : "Add your Anthropic API key"}
-      </p>
-      <p className="text-xs text-muted-foreground">
-        It stays in this browser and is sent only with each request. It is never
-        stored on the server.
-      </p>
-      <Input
-        type="password"
-        autoComplete="off"
-        placeholder="sk-ant-…"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      />
-      <Button type="submit" size="sm" disabled={!value.trim()}>
-        Save key
-      </Button>
-    </form>
-  )
-}
-
 /** Light-theme PNG capped at 1568 px on the long edge, uploaded to Convex storage. */
 async function exportPng(
   excalidraw: ExcalidrawImperativeAPI,
@@ -334,4 +333,42 @@ async function exportPng(
   if (!res.ok) throw new Error(`PNG upload failed: ${res.status}`)
   const { storageId } = (await res.json()) as { storageId: Id<"_storage"> }
   return storageId
+}
+
+/**
+ * Select + scroll to the cited elements whenever the question changes, and
+ * clear the selection when there is nothing to show. Short ids map back to
+ * Excalidraw ids through the serializer's idMap.
+ */
+function useHighlight(
+  excalidrawApi: React.RefObject<ExcalidrawImperativeAPI | null>,
+  elementIds: string[] | null,
+  idMap: Record<string, string> | null
+) {
+  const key = elementIds?.join(",") ?? ""
+  React.useEffect(() => {
+    const api = excalidrawApi.current
+    if (!api || !idMap) return
+    const ids = (key ? key.split(",") : [])
+      .map((short) => idMap[short])
+      .filter((id): id is string => !!id)
+    const elements = api.getSceneElements().filter((el) => ids.includes(el.id))
+    void import("@excalidraw/excalidraw").then(({ CaptureUpdateAction }) => {
+      api.updateScene({
+        appState: {
+          selectedElementIds: Object.fromEntries(ids.map((id) => [id, true])),
+        },
+        captureUpdate: CaptureUpdateAction.NEVER,
+      })
+    })
+    if (elements.length > 0) {
+      void api.setViewport({
+        target: elements,
+        fit: "scale-down",
+        animation: true,
+      })
+    }
+    // idMap changes with every autosave; only the question should retrigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, excalidrawApi])
 }

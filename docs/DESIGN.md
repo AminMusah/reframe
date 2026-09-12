@@ -63,7 +63,7 @@ interview.step({ interviewId, apiKey, answer? })
 ```
 
 - First turn sends the PNG (from Convex storage) and the graph; later turns carry conversation history only.
-- Each question cites `elementIds`; the client selects them and calls `scrollToContent(..., { fitToViewport })`. Ids the model returns are validated against the graph; unknown ones are dropped.
+- Each question cites `elementIds`; the client selects them (`updateScene` with `CaptureUpdateAction.NEVER`, so no undo entry) and calls `setViewport({ target, fit: "scale-down", animation: true })` — this Excalidraw build has no `scrollToContent`. Ids the model returns are validated against the graph; unknown ones are dropped.
 - `reason` is shown on hover — forces the model to ground questions in the drawing.
 - No hard cap. The model is instructed to stop when the brief would be complete, and to treat free text like "just generate it" as a `done` signal. `interview.finish` (a mutation) ends it from the Enough link; the pending question stays unanswered and lands under Open questions.
 - **Two-phase write.** (1) mutation appends the user's answer and sets `status: "thinking"` — rejected unless status was `awaiting_answer` (kills double-submits); (2) model call; (3) mutation appends the question and sets `awaiting_answer` or `done`. On failure: `status: "error"`, `lastError: bad_key | rate_limit | invalid_output | network`. Retry re-runs (2)–(3) without resending the answer; `bad_key` also opens the key dialog.
@@ -157,7 +157,7 @@ Scenes and PNGs go in file storage (docs are capped at 1 MB). Turns live as an a
 2. Convex + anonymous auth + `?p=` project autosave + Excalidraw mount. ✅
 3. `lib/llm/interview` + action + panel (options, "something else", Enough). ✅
 4. Brief action + reactive streaming + copy. ✅
-5. Highlighting, scene-changed banner, model dropdown, key dialog.
+5. Highlighting, scene-changed banner, model dropdown, key dialog. ✅
 6. `scripts/eval.ts`.
 7. GitHub/Google upgrade + Vercel deploy.
 

@@ -16,7 +16,7 @@ export type CanvasProps = {
   projectId: Id<"projects">
   project: { sceneHash?: string; sceneUrl: string | null }
   onStatus?: (status: SaveStatus) => void
-  onScene?: (scene: SerializedScene | null) => void
+  onScene?: (scene: SerializedScene | null, sceneHash: string | null) => void
   onApi?: (api: ExcalidrawImperativeAPI | null) => void
 }
 
@@ -28,10 +28,13 @@ export default function ExcalidrawCanvas({
   onApi,
 }: CanvasProps) {
   const { resolvedTheme } = useTheme()
-  const { onChange, status, scene, prime } = useAutosave(projectId)
+  const { onChange, status, scene, sceneHash, prime } = useAutosave(projectId)
 
   React.useEffect(() => onStatus?.(status), [onStatus, status])
-  React.useEffect(() => onScene?.(scene), [onScene, scene])
+  React.useEffect(
+    () => onScene?.(scene, sceneHash),
+    [onScene, scene, sceneHash]
+  )
 
   // Read once on mount; later project updates are our own saves echoing back.
   const initialData = React.useMemo(

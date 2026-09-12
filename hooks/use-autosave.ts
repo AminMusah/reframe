@@ -34,6 +34,8 @@ export function useAutosave(projectId: Id<"projects">) {
 
   const [status, setStatus] = React.useState<SaveStatus>("idle")
   const [scene, setScene] = React.useState<SerializedScene | null>(null)
+  /** Hash of the current serializer output — compared with the interview's pinned hash. */
+  const [sceneHash, setSceneHash] = React.useState<string | null>(null)
 
   const latest = React.useRef<Snapshot | null>(null)
   const lastVersion = React.useRef<number | null>(null)
@@ -60,6 +62,7 @@ export function useAutosave(projectId: Id<"projects">) {
     const serialized = serializeScene(snap.elements)
     setScene(serialized)
     const sceneHash = await hashScene(serialized.text)
+    setSceneHash(sceneHash)
     const json = serializeAsJSON(
       snap.elements,
       snap.appState,
@@ -133,7 +136,9 @@ export function useAutosave(projectId: Id<"projects">) {
         appState: data?.appState ?? {},
         files: data?.files ?? {},
       }
-      setScene(serializeScene(elements))
+      const serialized = serializeScene(elements)
+      setScene(serialized)
+      void hashScene(serialized.text).then(setSceneHash)
       if (dirty) schedule()
     },
     [schedule]
@@ -201,5 +206,5 @@ export function useAutosave(projectId: Id<"projects">) {
   // Only an unmount may cancel a pending save.
   React.useEffect(() => clearTimers, [])
 
-  return { onChange, status, scene, prime }
+  return { onChange, status, scene, sceneHash, prime }
 }

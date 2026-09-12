@@ -8,6 +8,7 @@ import * as React from "react"
 import { Canvas } from "@/components/canvas"
 import { InterviewPanel } from "@/components/interview-panel"
 import { ProjectMenu } from "@/components/project-menu"
+import { SettingsMenu } from "@/components/settings-menu"
 import { Button } from "@/components/ui/button"
 import {
   ResizableHandle,
@@ -43,6 +44,14 @@ function Project({ projectId }: { projectId: Id<"projects"> }) {
   const project = useQuery(api.projects.get, { id: projectId })
   const [status, setStatus] = React.useState<SaveStatus>("idle")
   const [scene, setScene] = React.useState<SerializedScene | null>(null)
+  const [sceneHash, setSceneHash] = React.useState<string | null>(null)
+  const onScene = React.useCallback(
+    (s: SerializedScene | null, hash: string | null) => {
+      setScene(s)
+      setSceneHash(hash)
+    },
+    []
+  )
   const apiRef = React.useRef<ExcalidrawImperativeAPI | null>(null)
   const onApi = React.useCallback((api: ExcalidrawImperativeAPI | null) => {
     apiRef.current = api
@@ -60,6 +69,7 @@ function Project({ projectId }: { projectId: Id<"projects"> }) {
         <span className="ml-auto text-xs text-muted-foreground">
           {STATUS_LABEL[status]}
         </span>
+        <SettingsMenu />
       </header>
 
       <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
@@ -68,7 +78,7 @@ function Project({ projectId }: { projectId: Id<"projects"> }) {
             projectId={projectId}
             project={project}
             onStatus={setStatus}
-            onScene={setScene}
+            onScene={onScene}
             onApi={onApi}
           />
         </ResizablePanel>
@@ -77,6 +87,7 @@ function Project({ projectId }: { projectId: Id<"projects"> }) {
           <InterviewPanel
             projectId={projectId}
             scene={scene}
+            sceneHash={sceneHash}
             excalidrawApi={apiRef}
           />
         </ResizablePanel>
