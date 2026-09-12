@@ -32,13 +32,13 @@ export function KeyForm({
             : "Add your API key"}
       </p>
       <p className="text-xs text-muted-foreground">
-        Anthropic (sk-ant-…) or OpenAI (sk-…). It stays in this browser and is
-        sent only with each request. It is never stored on the server.
+        Anthropic, OpenAI, OpenRouter, Google or Groq. It stays in this browser
+        and is sent only with each request. It is never stored on the server.
       </p>
       <Input
         type="password"
         autoComplete="off"
-        placeholder="sk-ant-… or sk-…"
+        placeholder="sk-ant-… / sk-… / sk-or-… / AIza… / gsk_…"
         value={value}
         onChange={(e) => setValue(e.target.value)}
       />

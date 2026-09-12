@@ -8,7 +8,7 @@
  *   pnpm eval --brief         # also generate and print the brief
  *   pnpm eval --reps 3        # repeat each fixture; summary reports mean ± spread
  *   pnpm eval --quiet         # only the per-run line and the summary
- *   pnpm eval --openai        # prefer OPENAI_API_KEY when both keys are present
+ *   pnpm eval --openai        # prefer that provider's key (also --google, --groq, --anthropic)
  *
  * Text-only: the interviewer gets the graph but no PNG (Node cannot render
  * Excalidraw). Needs ANTHROPIC_API_KEY in the env or .env.local.
@@ -24,7 +24,7 @@ import {
   type HistoryEntry,
   type Question,
 } from "../lib/llm/interview"
-import { providerForKey, type ModelId } from "../lib/llm/models"
+import { providerForKey, type ModelId, type Provider } from "../lib/llm/models"
 import { languageModel } from "../lib/llm/provider"
 import { serializeScene } from "../lib/serializer"
 
@@ -33,12 +33,18 @@ const FIXTURES = path.join(ROOT, "fixtures")
 const OUT = path.join(ROOT, ".eval")
 
 /** Cheap author + stronger judge, per provider of the key in use. */
-const HELPERS: Record<
-  "anthropic" | "openai",
-  { author: ModelId; judge: ModelId }
-> = {
+const HELPERS: Record<Provider, { author: ModelId; judge: ModelId }> = {
   anthropic: { author: "claude-haiku-4-5", judge: "claude-sonnet-5" },
   openai: { author: "gpt-5.6-luna", judge: "gpt-5.6-terra" },
+  google: { author: "gemini-3.5-flash-lite", judge: "gemini-3.8-flash" },
+  groq: {
+    author: "meta-llama/llama-4-scout-17b-16e-instruct",
+    judge: "meta-llama/llama-4-maverick-17b-128e-instruct",
+  },
+  openrouter: {
+    author: "anthropic/claude-haiku-4.5",
+    judge: "anthropic/claude-sonnet-5",
+  },
 }
 /** Safety rail for the runner only; the product has no cap. */
 const MAX_TURNS = 12
@@ -389,24 +395,33 @@ async function judge(
 
 /** ANTHROPIC_API_KEY or OPENAI_API_KEY from the env or .env.local; `--openai` prefers the latter. */
 function loadKey(): string {
-  const preferOpenAI = process.argv.includes("--openai")
-  const names = preferOpenAI
-    ? ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
-    : ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"]
+  const ENV: Record<Provider, string> = {
+    anthropic: "ANTHROPIC_API_KEY",
+    openai: "OPENAI_API_KEY",
+    google: "GOOGLE_GENERATIVE_AI_API_KEY",
+    groq: "GROQ_API_KEY",
+    openrouter: "OPENROUTER_API_KEY",
+  }
+  const order = (Object.keys(ENV) as Provider[]).sort((x, y) => {
+    const px = process.argv.includes(`--${x}`) ? 0 : 1
+    const py = process.argv.includes(`--${y}`) ? 0 : 1
+    return px - py
+  })
   let env = ""
   try {
     env = fs.readFileSync(path.join(ROOT, ".env.local"), "utf8")
   } catch {
     // no .env.local
   }
-  for (const name of names) {
+  for (const provider of order) {
+    const name = ENV[provider]
     const fromEnv = process.env[name]
     if (fromEnv) return fromEnv
     const m = env.match(new RegExp("^" + name + "=(.+)$", "m"))
     if (m) return m[1].trim()
   }
   console.error(
-    "ANTHROPIC_API_KEY or OPENAI_API_KEY is not set (env or .env.local)"
+    `No API key found (env or .env.local): ${Object.values(ENV).join(", ")}`
   )
   process.exit(1)
 }

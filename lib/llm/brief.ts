@@ -3,7 +3,7 @@ import { streamText, type ModelMessage } from "ai"
 import { classifyError } from "./errors"
 import type { HistoryEntry } from "./interview"
 import type { ModelId } from "./models"
-import { languageModel } from "./provider"
+import { languageModel, supportsVision } from "./provider"
 
 // Pure: no Convex imports. The action streams this into the briefs doc; the
 // eval runner calls it directly.
@@ -53,6 +53,7 @@ export type BriefInput = {
 /** Stream the brief body (without the appendix). Resolves to the full text. */
 export async function generateBrief(input: BriefInput): Promise<string> {
   const model = languageModel(input.apiKey, input.model)
+  const png = supportsVision(input.apiKey, input.model) ? input.png : null
 
   const transcript = input.transcript
     .map((entry) => {
@@ -71,12 +72,12 @@ export async function generateBrief(input: BriefInput): Promise<string> {
     {
       role: "user",
       content: [
-        ...(input.png
+        ...(png
           ? [
               {
                 type: "image" as const,
-                image: input.png.base64,
-                mediaType: input.png.mediaType,
+                image: png.base64,
+                mediaType: png.mediaType,
               },
             ]
           : []),

@@ -1,23 +1,43 @@
 import { createAnthropic } from "@ai-sdk/anthropic"
+import { createGoogleGenerativeAI } from "@ai-sdk/google"
+import { createGroq } from "@ai-sdk/groq"
 import { createOpenAI } from "@ai-sdk/openai"
+import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 
 import {
   DEFAULT_MODEL,
+  modelInfo,
   providerForKey,
   providerOf,
   type ModelId,
 } from "./models"
 
-/**
- * A language model for the given key. When the requested model belongs to a
- * different provider than the key (e.g. the user swapped keys mid-project),
- * fall back to the key's default model rather than failing with a 401.
- */
-export function languageModel(apiKey: string, model?: ModelId) {
+/** The model to actually use for a key: the requested one if it belongs to the key's provider, else that provider's default. */
+export function resolveModel(apiKey: string, model?: ModelId): ModelId {
   const provider = providerForKey(apiKey)
-  const id =
-    model && providerOf(model) === provider ? model : DEFAULT_MODEL[provider]
-  return provider === "anthropic"
-    ? createAnthropic({ apiKey })(id)
-    : createOpenAI({ apiKey })(id)
+  return model && providerOf(model) === provider
+    ? model
+    : DEFAULT_MODEL[provider]
+}
+
+/** A language model for the given key (see resolveModel for the fallback). */
+export function languageModel(apiKey: string, model?: ModelId) {
+  const id = resolveModel(apiKey, model)
+  switch (providerOf(id)) {
+    case "anthropic":
+      return createAnthropic({ apiKey })(id)
+    case "openai":
+      return createOpenAI({ apiKey })(id)
+    case "google":
+      return createGoogleGenerativeAI({ apiKey })(id)
+    case "groq":
+      return createGroq({ apiKey })(id)
+    case "openrouter":
+      return createOpenRouter({ apiKey })(id)
+  }
+}
+
+/** Whether the model that will serve this key can take the PNG. */
+export function supportsVision(apiKey: string, model?: ModelId): boolean {
+  return modelInfo(resolveModel(apiKey, model)).vision
 }
