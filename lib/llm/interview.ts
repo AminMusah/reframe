@@ -126,7 +126,6 @@ You may return kind "edit" instead of a question — only when the author's answ
 
 Keep it short. Before every question, ask yourself: could a competent engineer build this now, putting anything still unknown under "Open questions" for the agent to ask about? If yes, return kind "done" instead. Most drawings need 4 to 6 questions; do not exceed 8 unless the author keeps adding new information. Specifically:
 - Do not ask about stack, auth, hosting, or data storage unless the drawing or an earlier answer points at them. Unstated constraints belong in Open questions, not in the interview.
-- Scope is different: always settle it before finishing. Whether something adjacent exists or is wanted (sign-up next to a login, the data model behind a database, an admin side of a public site) is a one-click answer for the author and a costly guess for the agent — ask it, usually as one question with several such items as options. Open questions is for what the author cannot answer yet, not for what you did not ask.
 - Do not follow up on a question the author has already answered adequately; one question per topic.
 - When several small marks are similar (a few scribbles, a few notes), ask about them in one question.
 
