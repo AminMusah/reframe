@@ -37,10 +37,7 @@ const HELPERS: Record<Provider, { author: ModelId; judge: ModelId }> = {
   anthropic: { author: "claude-haiku-4-5", judge: "claude-sonnet-5" },
   openai: { author: "gpt-5.6-luna", judge: "gpt-5.6-terra" },
   google: { author: "gemini-3.5-flash-lite", judge: "gemini-3.8-flash" },
-  groq: {
-    author: "meta-llama/llama-4-scout-17b-16e-instruct",
-    judge: "meta-llama/llama-4-maverick-17b-128e-instruct",
-  },
+  groq: { author: "openai/gpt-oss-20b", judge: "openai/gpt-oss-120b" },
   openrouter: {
     author: "anthropic/claude-haiku-4.5",
     judge: "anthropic/claude-sonnet-5",

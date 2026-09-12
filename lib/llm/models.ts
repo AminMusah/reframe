@@ -53,21 +53,22 @@ export const MODELS = [
     provider: "google",
     vision: true,
   },
-  {
-    id: "meta-llama/llama-4-maverick-17b-128e-instruct",
-    label: "Llama 4 Maverick",
-    provider: "groq",
-    vision: true,
-  },
-  {
-    id: "meta-llama/llama-4-scout-17b-16e-instruct",
-    label: "Llama 4 Scout",
-    provider: "groq",
-    vision: true,
-  },
+  // Groq serves text-only models at the moment; the interviewer gets the graph alone.
   {
     id: "openai/gpt-oss-120b",
     label: "GPT-OSS 120B (no image)",
+    provider: "groq",
+    vision: false,
+  },
+  {
+    id: "qwen/qwen3.8-27b",
+    label: "Qwen 3.8 27B (no image)",
+    provider: "groq",
+    vision: false,
+  },
+  {
+    id: "openai/gpt-oss-20b",
+    label: "GPT-OSS 20B (no image)",
     provider: "groq",
     vision: false,
   },
@@ -109,7 +110,7 @@ export const DEFAULT_MODEL: Record<Provider, ModelId> = {
   anthropic: "claude-sonnet-5",
   openai: "gpt-5.6-terra",
   google: "gemini-3.8-flash",
-  groq: "meta-llama/llama-4-maverick-17b-128e-instruct",
+  groq: "openai/gpt-oss-120b",
   openrouter: "anthropic/claude-sonnet-5",
 }
 

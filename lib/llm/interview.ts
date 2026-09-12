@@ -92,6 +92,70 @@ export const editSchema = z.object({
 
 export const turnSchema = z.union([questionSchema, editSchema, doneSchema])
 
+/**
+ * What the model is asked to produce: one flat object, since providers differ
+ * in what they accept at the top level (Groq: object only; OpenAI: no oneOf)
+ * and open models drop wrappers. It is validated into `turnSchema` afterwards.
+ */
+export const flatTurnSchema = z.object({
+  kind: z
+    .enum(["question", "edit", "done"])
+    .describe(
+      "question: ask the author; edit: change the drawing; done: finish."
+    ),
+  text: z
+    .string()
+    .nullish()
+    .describe(
+      "question: the question. edit: what you are changing and why. done: null."
+    ),
+  options: z
+    .array(z.string())
+    .nullish()
+    .describe(
+      'question only: 2 to 5 concrete answers, no "something else". Otherwise null.'
+    ),
+  reason: z
+    .string()
+    .nullish()
+    .describe(
+      "question only: what in the drawing prompted it, citing ids. Otherwise null."
+    ),
+  elementIds: z
+    .array(z.string())
+    .nullish()
+    .describe("question only: ids this question is about. Otherwise null."),
+  ops: z
+    .array(editOpSchema)
+    .nullish()
+    .describe("edit only: 1 to 6 ops. Otherwise null."),
+  summary: z
+    .string()
+    .nullish()
+    .describe(
+      "done only: two or three sentences on what this is and what you learned. Otherwise null."
+    ),
+})
+
+export function fromFlatTurn(
+  flat: z.infer<typeof flatTurnSchema>
+): InterviewTurn | null {
+  const candidate =
+    flat.kind === "question"
+      ? {
+          kind: "question",
+          text: flat.text ?? "",
+          options: flat.options ?? [],
+          reason: flat.reason ?? "",
+          elementIds: flat.elementIds ?? [],
+        }
+      : flat.kind === "edit"
+        ? { kind: "edit", text: flat.text ?? "", ops: flat.ops ?? [] }
+        : { kind: "done", summary: flat.summary ?? flat.text ?? "" }
+  const parsed = turnSchema.safeParse(candidate)
+  return parsed.success ? parsed.data : null
+}
+
 export type Question = z.infer<typeof questionSchema>
 export type Edit = z.infer<typeof editSchema>
 export type EditOp = z.infer<typeof editOpSchema>
@@ -128,7 +192,9 @@ Keep it short. Before every question, ask yourself: could a competent engineer b
 - Do not follow up on a question the author has already answered adequately; one question per topic.
 - When several small marks are similar (a few scribbles, a few notes), ask about them in one question.
 
-Also return kind "done" whenever the author says they have had enough or asks for the prompt. The summary is two or three sentences on what this is and what you learned.`
+Also return kind "done" whenever the author says they have had enough or asks for the prompt. The summary is two or three sentences on what this is and what you learned.
+
+Reply with a single JSON object matching the schema you were given: every field present, null where it does not apply to the kind.`
 
 export type InterviewInput = {
   apiKey: string
@@ -187,10 +253,15 @@ export async function interviewTurn(
       model,
       instructions: SYSTEM_PROMPT,
       messages,
-      output: Output.object({ schema: turnSchema, name: "interview_turn" }),
-      maxRetries: 1,
+      output: Output.object({ schema: flatTurnSchema, name: "interview_turn" }),
+      maxRetries: 2,
+      // Groq's strict mode requires every key and open models omit the
+      // null ones; non-strict mode still sends the schema but tolerates gaps.
+      providerOptions: { groq: { strictJsonSchema: false } },
     })
     output = result.output
+      ? (fromFlatTurn(result.output) ?? undefined)
+      : undefined
   } catch (err) {
     throw classifyError(err)
   }
