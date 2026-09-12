@@ -38,6 +38,27 @@ const MAX_TURNS = 12
 type Rubric = { mustAsk: string[]; mustNotAsk: string[]; maxTurns: number }
 type EvalSpec = { intent: string; rubric: Rubric }
 
+type RunResult = {
+  name: string
+  rep: number
+  questions: number
+  mustAskHit: number
+  mustAskTotal: number
+  somethingElseRate: number
+  endedByUser: boolean
+  edits: number
+  failed: string | null
+  finished: boolean
+  withinTurns: boolean
+  mustAsk: string
+  violations: number
+  grounded: number
+  options: number
+  notes: string
+  grade: z.infer<typeof gradeSchema>
+  transcript: HistoryEntry[]
+}
+
 const answerSchema = z.object({
   choice: z
     .number()
@@ -109,7 +130,7 @@ async function main() {
     .filter((n) => only.length === 0 || only.includes(n))
 
   fs.mkdirSync(OUT, { recursive: true })
-  const results = []
+  const results: RunResult[] = []
   for (const [rep, name] of names.flatMap((n) =>
     Array.from({ length: reps }, (_, i) => [i + 1, n] as const)
   )) {
@@ -190,7 +211,7 @@ async function main() {
     const mustAskHit = grade.mustAsk.filter((m) => m.satisfied).length
     const violations = grade.mustNotAsk.filter((m) => m.violated).length
     const withinTurns = questions <= spec.rubric.maxTurns
-    const result = {
+    const result: RunResult = {
       name,
       rep,
       questions,
@@ -238,7 +259,7 @@ async function main() {
   if (reps > 1) {
     console.log(`\n=== aggregate over ${reps} reps (sum per rep, mean ± sd)`)
     const repIds = [...new Set(results.map((r) => r.rep))]
-    const stat = (f: (r: (typeof results)[number]) => number) => {
+    const stat = (f: (r: RunResult) => number) => {
       const per = repIds.map((k) =>
         results.filter((r) => r.rep === k).reduce((a, r) => a + f(r), 0)
       )
