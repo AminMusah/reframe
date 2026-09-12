@@ -13,7 +13,7 @@
  * Text-only: the interviewer gets the graph but no PNG (Node cannot render
  * Excalidraw). Needs ANTHROPIC_API_KEY in the env or .env.local.
  */
-import { generateText, Output } from "ai"
+import { APICallError, generateText, Output } from "ai"
 import fs from "node:fs"
 import path from "node:path"
 import { z } from "zod"
@@ -119,6 +119,31 @@ const gradeSchema = z.object({
   notes: z.string(),
 })
 
+/**
+ * Free tiers rate-limit by the minute; wait out a 429 (honouring the
+ * provider's retry hint when it gives one) rather than failing the run.
+ */
+async function withBackoff<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      const status = APICallError.isInstance(err) ? err.statusCode : undefined
+      const body = APICallError.isInstance(err)
+        ? String(err.responseBody ?? "")
+        : ""
+      const quota = status === 429 || /quota|rate limit/i.test(body)
+      if (!quota || attempt > 4) throw err
+      const hinted = /retryDelay"?:s*"?(d+)s/.exec(body)?.[1]
+      const wait = hinted ? Number(hinted) * 1000 + 1000 : 15_000 * attempt
+      console.error(
+        `  rate limited (${label}); waiting ${Math.round(wait / 1000)}s`
+      )
+      await new Promise((r) => setTimeout(r, wait))
+    }
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const wantBrief = args.includes("--brief")
@@ -171,11 +196,15 @@ async function main() {
     while (questions < MAX_TURNS) {
       let turn
       try {
-        turn = await interviewTurn({ apiKey, graph, history, validIds })
+        turn = await withBackoff("interviewer", () =>
+          interviewTurn({ apiKey, graph, history, validIds })
+        )
       } catch {
         // One retry, then record the failure instead of aborting the whole run.
         try {
-          turn = await interviewTurn({ apiKey, graph, history, validIds })
+          turn = await withBackoff("interviewer", () =>
+            interviewTurn({ apiKey, graph, history, validIds })
+          )
         } catch (err2) {
           failed = err2 instanceof Error ? err2.message : String(err2)
           say(`  FAILED: ${failed}`)
@@ -204,7 +233,9 @@ async function main() {
       say(`  Q${questions}: ${turn.text}`)
       say(`      cites ${JSON.stringify(turn.elementIds)} — ${turn.reason}`)
 
-      const reply = await simulateAuthor(models.author, spec.intent, turn)
+      const reply = await withBackoff("author", () =>
+        simulateAuthor(models.author, spec.intent, turn)
+      )
       let answer: string
       if (reply.enough) {
         answer = "That's enough — please write the brief now."
@@ -224,7 +255,9 @@ async function main() {
 
     let grade
     try {
-      grade = await judge(models.judge, spec.rubric, graph, history)
+      grade = await withBackoff("judge", () =>
+        judge(models.judge, spec.rubric, graph, history)
+      )
     } catch (err) {
       console.error(
         `judge failed for ${name}: ${err instanceof Error ? err.message.split(String.fromCharCode(10))[0] : err}`
