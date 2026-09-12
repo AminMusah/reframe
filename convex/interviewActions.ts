@@ -42,6 +42,14 @@ export const step = action({
     const png = interview.pngFileId
       ? await loadPng(ctx, interview.pngFileId)
       : null
+    const priorDoc = interview.priorInterviewId
+      ? await ctx.runQuery(api.interviews.get, {
+          id: interview.priorInterviewId,
+        })
+      : null
+    const prior = priorDoc
+      ? { graph: priorDoc.graph, history: toHistory(priorDoc.turns) }
+      : null
 
     try {
       const turn = await interviewTurn({
@@ -49,6 +57,7 @@ export const step = action({
         model: isModelId(interview.model) ? interview.model : undefined,
         graph: interview.graph,
         png,
+        prior,
         history: toHistory(interview.turns),
         validIds: graphIds(interview.graph),
       })

@@ -60,7 +60,8 @@ export function InterviewPanel({
 
   const nodeCount = scene?.graph.nodes.length ?? 0
 
-  const reframe = async () => {
+  /** Start an interview; `priorId` carries an earlier one's answers along. */
+  const reframe = async (priorId?: Id<"interviews">) => {
     const excalidraw = excalidrawApi.current
     if (!excalidraw || !apiKey) return
     setBusy(true)
@@ -76,6 +77,7 @@ export function InterviewPanel({
         graph: serialized.text,
         pngFileId,
         model,
+        priorInterviewId: priorId,
       })
       await step({ interviewId, apiKey })
     } catch (err) {
@@ -128,7 +130,11 @@ export function InterviewPanel({
           <div className="space-y-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
             <p>Drawing changed since this interview started.</p>
             <div className="flex gap-2">
-              <Button size="sm" onClick={reframe} disabled={busy}>
+              <Button
+                size="sm"
+                onClick={() => reframe(interview._id)}
+                disabled={busy}
+              >
                 Restart with new drawing
               </Button>
               <Button
@@ -178,7 +184,7 @@ export function InterviewPanel({
         <div className="space-y-2 border-t p-4">
           <Button
             className="w-full"
-            onClick={reframe}
+            onClick={() => reframe(interview?._id)}
             disabled={busy || nodeCount === 0}
           >
             {busy ? <Spinner /> : interview ? "Interview again" : "Reframe"}
@@ -186,7 +192,9 @@ export function InterviewPanel({
           <p className="text-xs text-muted-foreground">
             {nodeCount === 0
               ? "Draw something, then click Reframe."
-              : `${nodeCount} element${nodeCount === 1 ? "" : "s"} will be sent with a PNG of the canvas.`}
+              : interview
+                ? "Starts a new interview that already knows your earlier answers."
+                : `${nodeCount} element${nodeCount === 1 ? "" : "s"} will be sent with a PNG of the canvas.`}
           </p>
           {startError && (
             <p className="text-xs text-destructive">{startError}</p>

@@ -30,6 +30,12 @@ export const interviewStatus = v.union(
   v.literal("error")
 )
 
+export const briefTarget = v.union(
+  v.literal("generic"),
+  v.literal("claude-code"),
+  v.literal("cursor")
+)
+
 export const briefStatus = v.union(
   v.literal("streaming"),
   v.literal("done"),
@@ -67,6 +73,8 @@ export default defineSchema({
     status: interviewStatus,
     lastError: v.optional(errorCode),
     turns: v.array(turn),
+    // Restart-with-context: the interview this one continues from.
+    priorInterviewId: v.optional(v.id("interviews")),
     createdAt: v.number(),
   })
     .index("by_project_and_createdAt", ["projectId", "createdAt"])
@@ -76,6 +84,8 @@ export default defineSchema({
   briefs: defineTable({
     interviewId: v.id("interviews"),
     ownerId: v.string(),
+    // Absent on rows from before per-target briefs; read as "generic".
+    target: v.optional(briefTarget),
     model: v.string(),
     text: v.string(),
     status: briefStatus,

@@ -83,6 +83,8 @@ export type InterviewInput = {
   /** PNG of the drawing; omitted in text-only evals. */
   png?: { base64: string; mediaType: string } | null
   history: HistoryEntry[]
+  /** A previous interview about an earlier version of this drawing (restart-with-context). */
+  prior?: { graph: string; history: HistoryEntry[] } | null
   /** Ids that exist in the graph; anything else the model cites is dropped. */
   validIds: Iterable<string>
 }
@@ -108,7 +110,9 @@ export async function interviewTurn(
           : []),
         {
           type: "text",
-          text: `Here is the drawing as a graph:\n\n${input.graph}\n\nStart the interview.`,
+          text:
+            (input.prior ? priorContext(input.prior) : "") +
+            `Here is the drawing as a graph:\n\n${input.graph}\n\nStart the interview.`,
           // The image + graph never change within an interview: cache them.
           providerOptions: {
             anthropic: { cacheControl: { type: "ephemeral" } },
@@ -146,4 +150,31 @@ export async function interviewTurn(
     }
   }
   return output
+}
+
+/** Earlier answers travel with a restart so the author is not asked twice. */
+function priorContext(prior: {
+  graph: string
+  history: HistoryEntry[]
+}): string {
+  const transcript = prior.history
+    .map((h) =>
+      h.role === "user"
+        ? `Author: ${h.answer}`
+        : h.turn.kind === "question"
+          ? `You asked: ${h.turn.text}`
+          : `You concluded: ${h.turn.summary}`
+    )
+    .join("\n")
+  return `An earlier interview covered a previous version of this drawing. Its answers still hold unless the new drawing contradicts them — do not ask them again; focus on what changed or was never covered. Element ids in it refer to the OLD graph.
+
+Earlier drawing:
+${prior.graph}
+
+Earlier interview:
+${transcript}
+
+---
+
+`
 }

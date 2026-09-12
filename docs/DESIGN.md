@@ -83,7 +83,7 @@ Own system prompt, streamed into a `briefs` doc (see Streaming above). **Trigger
 # Appendix: source diagram   (the compacted graph)
 ```
 
-Copy button. "Regenerate" and per-target variants (Claude Code / Cursor) are v1.1.
+Copy button. Targets (Generic / Claude Code / Cursor) differ only in a framing note appended to the brief prompt; the six sections are identical. One brief per (interview, target); Regenerate inserts a new row, the newest wins. The generic brief auto-starts; others generate on demand.
 
 ## UI
 
@@ -109,6 +109,7 @@ Scenes and PNGs go in file storage (docs are capped at 1 MB). Turns live as an a
 - **Projects:** `/` with no `?p=` opens the most-recent project (creating one if none).
 - **Autosave:** `onChange` → ignore if no element `version` changed → debounce ~1.5 s idle (max ~10 s) → upload scene JSON to file storage → mutation swaps `sceneFileId`/`sceneHash` and deletes the old file. Every debounced tick also mirrors the scene to `localStorage` so reload is instant and a failed upload loses nothing. PNGs are exported only on Reframe.
 - **PNG export:** `exportToBlob`, scaled so the long edge ≤ 1568 px (Anthropic downscales beyond that), light theme + white background regardless of canvas theme, `exportPadding` ~32. Action loads it via `ctx.storage.get` → base64 image part.
+- **Restart with context:** any restart from an existing interview (banner, or "Interview again") passes `priorInterviewId`; the action prepends the earlier graph + transcript to the first message and tells the model not to re-ask what was settled.
 - **Interviews per project:** append-only. On load the panel shows the latest interview (+ brief) if its `sceneHash` matches the current scene, else the idle Reframe state. Reframe on an unfinished interview with the same hash focuses it; a different hash creates a new one (after the banner). No history UI in v1.
 
 ## Auth
@@ -140,8 +141,8 @@ Scenes and PNGs go in file storage (docs are capped at 1 MB). Turns live as an a
 | 8   | Scene-changed banner → restart                                                                    | v1     |
 | 9   | Fixture evals + serializer unit tests                                                             | v1     |
 | 10  | Agent `edit` turn with Accept / Undo                                                              | v1.1   |
-| 11  | Restart carrying previous answers as context                                                      | v1.1   |
-| 12  | Multiple briefs per interview (regenerate, per-target)                                            | v1.1   |
+| 11  | Restart carrying previous answers as context                                                      | ✅ v1.1 |
+| 12  | Multiple briefs per interview (regenerate, per-target)                                            | ✅ v1.1 |
 | 13  | OpenAI / Gemini providers                                                                         | later  |
 | 14  | Public share links                                                                                | later  |
 

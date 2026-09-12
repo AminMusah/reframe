@@ -61,12 +61,22 @@ export const start = mutation({
     graph: v.string(),
     pngFileId: v.optional(v.id("_storage")),
     model: v.string(),
+    priorInterviewId: v.optional(v.id("interviews")),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx)
     const project = await ctx.db.get(args.projectId)
     if (!project || project.ownerId !== userId) {
       throw new ConvexError({ code: "not_found", message: "Project not found" })
+    }
+    if (args.priorInterviewId) {
+      const prior = await ctx.db.get(args.priorInterviewId)
+      if (!prior || prior.ownerId !== userId) {
+        throw new ConvexError({
+          code: "not_found",
+          message: "Prior interview not found",
+        })
+      }
     }
     await ctx.db.patch(args.projectId, { pngFileId: args.pngFileId })
     return ctx.db.insert("interviews", {

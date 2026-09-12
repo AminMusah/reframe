@@ -29,10 +29,20 @@ Rules:
 - Never invent requirements. When the author's answer contradicts the drawing, the answer wins; say so briefly.
 - Be specific and terse. No preamble, no closing remarks, and do not add an appendix — one is attached automatically.`
 
+export type BriefTarget = "generic" | "claude-code" | "cursor"
+
+/** What changes per target is only the framing; the six sections stay the same. */
+export const TARGET_NOTES: Record<BriefTarget, string> = {
+  generic: "",
+  "claude-code": `The reader is Claude Code, working in a terminal on the repository. Under Constraints, tell it to check for an existing CLAUDE.md and follow it, to run the project's existing tests and linters before finishing, and to commit in small steps. Under Open questions, tell it to ask the user in the conversation before starting work on anything that depends on the answer.`,
+  cursor: `The reader is Cursor's agent, working inside the editor. Under Constraints, tell it to respect existing .cursor/rules, to keep edits scoped to the files the brief implies, and to show a plan before large changes. Under Open questions, tell it to ask in chat before touching anything that depends on the answer.`,
+}
+
 export type BriefInput = {
   apiKey: string
   model?: ModelId
   graph: string
+  target?: BriefTarget
   png?: { base64: string; mediaType: string } | null
   /** The full interview, questions and answers, in order. */
   transcript: HistoryEntry[]
@@ -77,9 +87,14 @@ export async function generateBrief(input: BriefInput): Promise<string> {
   ]
 
   try {
+    const note = TARGET_NOTES[input.target ?? "generic"]
     const result = streamText({
       model,
-      instructions: BRIEF_PROMPT,
+      instructions: note
+        ? `${BRIEF_PROMPT}
+
+${note}`
+        : BRIEF_PROMPT,
       messages,
       maxRetries: 1,
     })
