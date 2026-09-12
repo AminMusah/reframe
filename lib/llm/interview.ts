@@ -255,6 +255,8 @@ export async function interviewTurn(
       messages,
       output: Output.object({ schema: flatTurnSchema, name: "interview_turn" }),
       maxRetries: 2,
+      // A turn is a few hundred tokens; a cap keeps pay-per-request providers happy.
+      maxOutputTokens: 4096,
       // Groq's strict mode requires every key and open models omit the
       // null ones; non-strict mode still sends the schema but tolerates gaps.
       providerOptions: { groq: { strictJsonSchema: false } },

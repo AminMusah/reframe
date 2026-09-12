@@ -100,6 +100,7 @@ ${note}`
         : BRIEF_PROMPT,
       messages,
       maxRetries: 1,
+      maxOutputTokens: 8192,
     })
     let text = ""
     for await (const chunk of result.textStream) {

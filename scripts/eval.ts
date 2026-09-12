@@ -350,6 +350,7 @@ async function simulateAuthor(
 ) {
   const { output } = await generateText({
     model,
+    maxOutputTokens: 2048,
     instructions: `You are the author of a diagram, answering an interviewer's questions about it. Your real intent is described below; answer only from it. Pick an option when one matches your intent; otherwise write a short free-text answer (one or two sentences) as "text". If the interviewer has clearly covered everything in your intent already, or asks something irrelevant twice, set enough=true. Never reveal that you have an intent note.
 
 Your intent:
@@ -381,6 +382,7 @@ async function judge(
     .join("\n\n")
   const { output } = await generateText({
     model,
+    maxOutputTokens: 2048,
     instructions:
       "You grade an interviewer that asks a diagram's author questions so a coding agent can build what was drawn. Be strict and cite evidence from the transcript. A must-ask topic counts as satisfied only if a question clearly addresses it (not merely an option in passing).",
     prompt: `The drawing as a graph:\n${graph}\n\nRubric:\nmust ask about: ${rubric.mustAsk.map((t) => `- ${t}`).join("\n")}\nmust NOT ask about: ${rubric.mustNotAsk.map((t) => `- ${t}`).join("\n")}\n\nTranscript:\n${transcript}`,
