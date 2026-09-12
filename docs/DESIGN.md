@@ -160,7 +160,7 @@ Scenes and PNGs go in file storage (docs are capped at 1 MB). Turns live as an a
 4. Brief action + reactive streaming + copy. ✅
 5. Highlighting, scene-changed banner, model dropdown, key dialog. ✅
 6. `scripts/eval.ts`. ✅
-7. GitHub/Google upgrade + Vercel deploy.
+7. GitHub/Google upgrade + Vercel deploy. ✅ (code + README; OAuth apps and the Vercel project are set up by hand)
 
 ## Open items (decide when reached)
 

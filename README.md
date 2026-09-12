@@ -1,21 +1,56 @@
-# Next.js template
+# Reframe
 
-This is a Next.js template with shadcn/ui.
+Draw a diagram, get interviewed about it, paste the resulting brief into Claude Code or Cursor. Design and decisions: [`docs/DESIGN.md`](docs/DESIGN.md).
 
-## Adding components
-
-To add components to your app, run the following command:
+## Local development
 
 ```bash
-npx shadcn@latest add button
+pnpm install
+pnpm convex          # terminal 1 — logs in, creates a dev deployment, pushes convex/
+pnpm dev             # terminal 2 — Next.js on http://localhost:3000
 ```
 
-This will place the ui components in the `components` directory.
+`pnpm convex` writes `CONVEX_DEPLOYMENT` and `NEXT_PUBLIC_CONVEX_URL` to `.env.local`. Add the `.site` origin yourself (see `.env.example`):
 
-## Using components
-
-To use the components in your app, import them as follows:
-
-```tsx
-import { Button } from "@/components/ui/button";
 ```
+NEXT_PUBLIC_CONVEX_SITE_URL=https://<deployment>.convex.site
+```
+
+Then set the deployment's own env:
+
+```bash
+npx convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
+npx convex env set SITE_URL http://localhost:3000
+```
+
+Open the app, paste an Anthropic API key in the header (it stays in your browser), draw, click **Reframe**.
+
+## Scripts
+
+| Command | What |
+|---|---|
+| `pnpm test` | Serializer unit tests over `fixtures/*.excalidraw` |
+| `pnpm dump-graph fixtures/x.excalidraw` | Print what the model sees for a drawing |
+| `pnpm eval [fixture] [--brief]` | Interview evals: simulated author + judge (needs `ANTHROPIC_API_KEY` in env or `.env.local`) |
+| `pnpm build` | Static export to `out/` |
+
+## Sign-in with GitHub / Google (optional)
+
+Visitors are signed in anonymously; a provider lets them keep projects across devices. Buttons appear only when a provider's credentials are set on the Convex deployment.
+
+1. Create an OAuth app. The callback URL is on the **Convex** origin, not the app's:
+   `https://<deployment>.convex.site/api/auth/callback/github` (or `/google`).
+2. `npx convex env set GITHUB_CLIENT_ID … && npx convex env set GITHUB_CLIENT_SECRET …` (same for `GOOGLE_*`).
+
+Use separate OAuth apps for the dev and prod deployments.
+
+## Deploy (Vercel + Convex prod)
+
+1. `npx convex deploy` once locally to create the prod deployment, then in the Convex dashboard set `BETTER_AUTH_SECRET`, `SITE_URL=https://<your-vercel-domain>`, and any OAuth credentials.
+2. In Vercel: import the repo, framework Next.js, and set
+   - Build command: `npx convex deploy --cmd 'pnpm build'`
+   - Env `CONVEX_DEPLOY_KEY` (Convex dashboard → Settings → Deploy keys, production)
+   - Env `NEXT_PUBLIC_CONVEX_SITE_URL=https://<prod-deployment>.convex.site`
+
+   `convex deploy --cmd` pushes `convex/` to prod and injects `NEXT_PUBLIC_CONVEX_URL` into the build.
+3. Update `SITE_URL` (and OAuth callback origins) whenever the Vercel domain changes.

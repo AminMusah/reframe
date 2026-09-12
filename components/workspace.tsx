@@ -7,6 +7,7 @@ import * as React from "react"
 
 import { Canvas } from "@/components/canvas"
 import { InterviewPanel } from "@/components/interview-panel"
+import { AccountMenu } from "@/components/account-menu"
 import { ProjectMenu } from "@/components/project-menu"
 import { SettingsMenu } from "@/components/settings-menu"
 import { Button } from "@/components/ui/button"
@@ -70,6 +71,7 @@ function Project({ projectId }: { projectId: Id<"projects"> }) {
           {STATUS_LABEL[status]}
         </span>
         <SettingsMenu />
+        <AccountMenu />
       </header>
 
       <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">

@@ -68,7 +68,9 @@ export default defineSchema({
     lastError: v.optional(errorCode),
     turns: v.array(turn),
     createdAt: v.number(),
-  }).index("by_project_and_createdAt", ["projectId", "createdAt"]),
+  })
+    .index("by_project_and_createdAt", ["projectId", "createdAt"])
+    .index("by_ownerId", ["ownerId"]),
 
   // Streamed by the brief action: `text` grows every ~250 ms until `done`.
   briefs: defineTable({
@@ -79,5 +81,7 @@ export default defineSchema({
     status: briefStatus,
     lastError: v.optional(errorCode),
     createdAt: v.number(),
-  }).index("by_interview_and_createdAt", ["interviewId", "createdAt"]),
+  })
+    .index("by_interview_and_createdAt", ["interviewId", "createdAt"])
+    .index("by_ownerId", ["ownerId"]),
 })

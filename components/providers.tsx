@@ -36,7 +36,13 @@ function AnonymousSignIn({ children }: { children: React.ReactNode }) {
   const attempted = React.useRef(false)
 
   React.useEffect(() => {
-    if (isPending || session || attempted.current) return
+    if (isPending) return
+    if (session) {
+      // A later sign-out should get a fresh anonymous session again.
+      attempted.current = false
+      return
+    }
+    if (attempted.current) return
     attempted.current = true
     void authClient.signIn.anonymous()
   }, [isPending, session])
