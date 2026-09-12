@@ -6,7 +6,14 @@ import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Cancel01Icon, CheckmarkCircle02Icon, InformationCircleIcon, Alert02Icon, MultiplicationSignCircleIcon, Loading03Icon } from "@hugeicons/core-free-icons"
+import {
+  Cancel01Icon,
+  CheckmarkCircle02Icon,
+  InformationCircleIcon,
+  Alert02Icon,
+  MultiplicationSignCircleIcon,
+  Loading03Icon,
+} from "@hugeicons/core-free-icons"
 
 const toast = ToastPrimitive.createToastManager()
 
@@ -138,13 +145,21 @@ function ToastIcon({ type }: { type: string | undefined }) {
 
   if (type === "success") {
     icon = (
-      <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} aria-hidden="true" />
+      <HugeiconsIcon
+        icon={CheckmarkCircle02Icon}
+        strokeWidth={2}
+        aria-hidden="true"
+      />
     )
   }
 
   if (type === "info") {
     icon = (
-      <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} aria-hidden="true" />
+      <HugeiconsIcon
+        icon={InformationCircleIcon}
+        strokeWidth={2}
+        aria-hidden="true"
+      />
     )
   }
 
@@ -156,13 +171,23 @@ function ToastIcon({ type }: { type: string | undefined }) {
 
   if (type === "error") {
     icon = (
-      <HugeiconsIcon icon={MultiplicationSignCircleIcon} strokeWidth={2} className="text-destructive" aria-hidden="true" />
+      <HugeiconsIcon
+        icon={MultiplicationSignCircleIcon}
+        strokeWidth={2}
+        className="text-destructive"
+        aria-hidden="true"
+      />
     )
   }
 
   if (type === "loading") {
     icon = (
-      <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className="animate-spin" aria-hidden="true" />
+      <HugeiconsIcon
+        icon={Loading03Icon}
+        strokeWidth={2}
+        className="animate-spin"
+        aria-hidden="true"
+      />
     )
   }
 

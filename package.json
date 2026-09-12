@@ -12,17 +12,21 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dump-graph": "tsx scripts/dump-graph.ts"
+    "dump-graph": "tsx scripts/dump-graph.ts",
+    "convex": "convex dev"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
+    "@convex-dev/better-auth": "^0.12.5",
     "@excalidraw/excalidraw": "0.18.0-afa3a65",
     "@hugeicons/core-free-icons": "^4.3.2",
     "@hugeicons/react": "^1.1.10",
     "@shadcn/react": "^0.3.1",
+    "better-auth": "~1.6.31",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "cn": "^0.2.6",
+    "convex": "^1.45.0",
     "date-fns": "^4.4.0",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.5.0",

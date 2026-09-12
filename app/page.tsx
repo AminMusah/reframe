@@ -1,18 +1,13 @@
-"use client"
-import dynamic from "next/dynamic"
-import "@excalidraw/excalidraw/index.css"
+import { Suspense } from "react"
 
-const Excalidraw = dynamic(
-  async () => (await import("@excalidraw/excalidraw")).Excalidraw,
-  {
-    ssr: false,
-  }
-)
+import { Workspace } from "@/components/workspace"
 
+// Static export: the project id travels in `?p=`, read client-side via
+// useSearchParams, which must sit under a Suspense boundary.
 export default function Page() {
   return (
-    <div className="h-125">
-      <Excalidraw />
-    </div>
+    <Suspense fallback={null}>
+      <Workspace />
+    </Suspense>
   )
 }
