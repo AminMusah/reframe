@@ -20,13 +20,13 @@ export default function PrivacyPage() {
       </p>
 
       <Section title="What Reframe is">
-        Reframe turns a diagram you draw into a written brief by interviewing
-        you about it. It is a small, single-purpose tool. This page says what it
-        stores, where, and why.
+        Reframe turns a diagram you draw into a prompt for a coding agent by
+        interviewing you about it. It is a small, single-purpose tool. This page
+        says what it stores, where, and why.
       </Section>
 
       <Section title="Your drawings and interviews">
-        The drawings you make, your answers to the interview, and the briefs
+        The drawings you make, your answers to the interview, and the prompts
         that come out of them are saved to the app&apos;s database (hosted on{" "}
         <a href="https://www.convex.dev" className="underline">
           Convex
@@ -67,7 +67,7 @@ export default function PrivacyPage() {
 
       <Section title="Deleting your data">
         Email the address below and your account, projects, drawings, interviews
-        and briefs will be deleted.
+        and prompts will be deleted.
       </Section>
 
       <Section title="Contact">

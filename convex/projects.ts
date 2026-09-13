@@ -74,7 +74,7 @@ export const create = mutation({
     if (owned.length >= MAX_PROJECTS_PER_USER) {
       throw new ConvexError({
         code: "project_limit",
-        message: `You can have up to ${MAX_PROJECTS_PER_USER} projects. Rename and reuse one, or delete some first.`,
+        message: `You can have up to ${MAX_PROJECTS_PER_USER} drawings. Delete one first.`,
       })
     }
     return ctx.db.insert("projects", {

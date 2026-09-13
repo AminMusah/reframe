@@ -8,7 +8,7 @@ import { languageModel, supportsVision } from "./provider"
 // Pure: no Convex imports. The action streams this into the briefs doc; the
 // eval runner calls it directly.
 
-export const BRIEF_PROMPT = `You write implementation briefs for coding agents (Claude Code, Cursor) from a diagram and an interview with its author.
+export const BRIEF_PROMPT = `You write implementation prompts for coding agents (Claude Code, Codex, Cursor and the like) from a diagram and an interview with its author. The author will paste your output into the agent as-is.
 
 Write in Markdown with exactly these top-level sections, in this order, each as a level-1 heading:
 
@@ -24,25 +24,15 @@ Rules:
 - Scope: two lists, "In" and "Explicitly out". Only include what the drawing or the interview supports.
 - Structure: one subsection (level 2) per screen, service, or node in the drawing, using the author's labels. Say what it contains and how it connects to the others, in the author's terms.
 - Behavior: interactions, transitions, data flow, and edge cases, as concrete statements an engineer can implement.
-- Constraints: stack, styling, auth, data, hosting — only what was stated or is clearly implied.
-- Open questions: everything the interview did not resolve. Tell the agent to ask the user about these before guessing.
+- Constraints: stack, styling, auth, data, hosting — only what was stated or is clearly implied. Always end this section with these standing instructions to the agent: follow the repository's existing agent instructions file if there is one (CLAUDE.md, AGENTS.md or .cursor/rules), run the project's existing tests and linters before finishing, and work in small verifiable steps.
+- Open questions: everything the interview did not resolve. Tell the agent to ask the user about these before starting work that depends on them — and, if it cannot ask, to state its assumption at the top of its reply and continue.
 - Never invent requirements. When the author's answer contradicts the drawing, the answer wins; say so briefly.
 - Be specific and terse. No preamble, no closing remarks, and do not add an appendix — one is attached automatically.`
-
-export type BriefTarget = "generic" | "claude-code" | "cursor"
-
-/** What changes per target is only the framing; the six sections stay the same. */
-export const TARGET_NOTES: Record<BriefTarget, string> = {
-  generic: "",
-  "claude-code": `The reader is Claude Code, working in a terminal on the repository. Under Constraints, tell it to check for an existing CLAUDE.md and follow it, to run the project's existing tests and linters before finishing, and to commit in small steps. Under Open questions, tell it to ask the user in the conversation before starting work on anything that depends on the answer.`,
-  cursor: `The reader is Cursor's agent, working inside the editor. Under Constraints, tell it to respect existing .cursor/rules, to keep edits scoped to the files the brief implies, and to show a plan before large changes. Under Open questions, tell it to ask in chat before touching anything that depends on the answer.`,
-}
 
 export type BriefInput = {
   apiKey: string
   model?: ModelId
   graph: string
-  target?: BriefTarget
   png?: { base64: string; mediaType: string } | null
   /** The full interview, questions and answers, in order. */
   transcript: HistoryEntry[]
@@ -93,14 +83,9 @@ export async function generateBrief(input: BriefInput): Promise<string> {
   ]
 
   try {
-    const note = TARGET_NOTES[input.target ?? "generic"]
     const result = streamText({
       model,
-      instructions: note
-        ? `${BRIEF_PROMPT}
-
-${note}`
-        : BRIEF_PROMPT,
+      instructions: BRIEF_PROMPT,
       messages,
       maxRetries: 1,
       maxOutputTokens: 8192,

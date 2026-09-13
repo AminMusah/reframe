@@ -28,8 +28,8 @@ import type { Id } from "@/convex/_generated/dataModel"
 import { clearMirror } from "@/lib/scene-store"
 import { cn } from "@/lib/utils"
 
-/** The project list: open, create, delete. Opened from the canvas menu. */
-export function ProjectsSheet({
+/** The drawing list (one project per drawing): open, create, delete. */
+export function DrawingsSheet({
   open,
   onOpenChange,
   currentId,
@@ -54,9 +54,10 @@ export function ProjectsSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" className="w-80">
         <SheetHeader>
-          <SheetTitle>Projects</SheetTitle>
+          <SheetTitle>Drawings</SheetTitle>
           <SheetDescription>
-            One drawing per project. Names come from the drawing&apos;s title.
+            Each drawing keeps its own interviews and prompts. Names come from
+            the drawing&apos;s title.
           </SheetDescription>
         </SheetHeader>
 
@@ -127,13 +128,13 @@ export function ProjectsSheet({
                 setCreateError(
                   err instanceof ConvexError
                     ? ((err.data as { message?: string }).message ??
-                        "Couldn't create the project.")
-                    : "Couldn't create the project."
+                        "Couldn't create the drawing.")
+                    : "Couldn't create the drawing."
                 )
               }
             }}
           >
-            New project
+            New drawing
           </Button>
         </div>
       </SheetContent>
@@ -159,9 +160,9 @@ export function RenameDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Rename project</DialogTitle>
+          <DialogTitle>Rename drawing</DialogTitle>
           <DialogDescription>
-            Untitled projects take their name from the drawing&apos;s title
+            Untitled drawings take their name from their title text
             automatically.
           </DialogDescription>
         </DialogHeader>
@@ -177,7 +178,7 @@ export function RenameDialog({
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            aria-label="Project name"
+            aria-label="Drawing name"
           />
           <Button type="submit" disabled={!name.trim()}>
             Rename

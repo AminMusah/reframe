@@ -352,7 +352,30 @@
   font-size: 0.8125rem;
   letter-spacing: 0;
 }
+.excalidraw .layer-ui__wrapper__top-right .sidebar-trigger__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  line-height: 1;
+}
 /* The shape-properties island stays closed while a question is pointing at elements. */
 .excalidraw[data-highlighting] .App-menu__left {
   display: none;
+}
+/* The panel trigger reads as pressed while the panel is open. */
+.excalidraw
+  .layer-ui__wrapper__top-right
+  [aria-pressed="true"]
+  > .sidebar-trigger {
+  background: var(--foreground);
+  color: var(--background);
+}
+.excalidraw
+  .layer-ui__wrapper__top-right
+  [aria-pressed="true"]
+  > .sidebar-trigger
+  .rounded-full {
+  background: var(--background);
+  color: var(--foreground);
 }

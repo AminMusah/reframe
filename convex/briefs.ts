@@ -3,17 +3,17 @@ import { ConvexError, v } from "convex/values"
 import { authComponent } from "./auth"
 import type { MutationCtx, QueryCtx } from "./_generated/server"
 import { internalMutation, mutation, query } from "./_generated/server"
-import { briefTarget, errorCode } from "./schema"
+import { errorCode } from "./schema"
 
 async function requireUserId(ctx: QueryCtx | MutationCtx): Promise<string> {
   const user = await authComponent.getAuthUser(ctx)
   return user._id
 }
 
-/** The newest brief for an interview and target. */
+/** The newest brief for an interview. */
 export const latestForInterview = query({
-  args: { interviewId: v.id("interviews"), target: briefTarget },
-  handler: async (ctx, { interviewId, target }) => {
+  args: { interviewId: v.id("interviews") },
+  handler: async (ctx, { interviewId }) => {
     const userId = await requireUserId(ctx)
     const briefs = await ctx.db
       .query("briefs")
@@ -22,26 +22,21 @@ export const latestForInterview = query({
       )
       .order("desc")
       .collect()
-    return (
-      briefs.find(
-        (b) => b.ownerId === userId && (b.target ?? "generic") === target
-      ) ?? null
-    )
+    return briefs.find((b) => b.ownerId === userId) ?? null
   },
 })
 
 /**
- * Open a brief in the `streaming` state. Returns the existing one for the
- * target when a stream is already running or finished, so a double-click
+ * Open a brief in the `streaming` state. Returns the existing one when a
+ * stream is already running or finished, so a double-click
  * can't fork it; `regenerate` always starts a new one (unless one is mid-stream).
  */
 export const create = mutation({
   args: {
     interviewId: v.id("interviews"),
-    target: briefTarget,
     regenerate: v.optional(v.boolean()),
   },
-  handler: async (ctx, { interviewId, target, regenerate }) => {
+  handler: async (ctx, { interviewId, regenerate }) => {
     const userId = await requireUserId(ctx)
     const interview = await ctx.db.get(interviewId)
     if (!interview || interview.ownerId !== userId) {
@@ -63,7 +58,7 @@ export const create = mutation({
       )
       .order("desc")
       .collect()
-    const existing = briefs.find((b) => (b.target ?? "generic") === target)
+    const existing = briefs[0]
     if (existing?.status === "streaming")
       return { id: existing._id, fresh: false }
     if (existing && existing.status !== "error" && !regenerate) {
@@ -72,7 +67,6 @@ export const create = mutation({
     const id = await ctx.db.insert("briefs", {
       interviewId,
       ownerId: userId,
-      target,
       model: interview.model,
       text: "",
       status: "streaming",

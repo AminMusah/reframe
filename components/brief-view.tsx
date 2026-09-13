@@ -10,14 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
-import type { BriefTarget } from "@/lib/llm/brief"
-import { cn } from "@/lib/utils"
-
-const TARGETS: { id: BriefTarget; label: string }[] = [
-  { id: "generic", label: "Generic" },
-  { id: "claude-code", label: "Claude Code" },
-  { id: "cursor", label: "Cursor" },
-]
 
 const ERROR_TEXT = {
   bad_key: "The API key was rejected.",
@@ -29,9 +21,9 @@ const ERROR_TEXT = {
 } as const
 
 /**
- * Briefs for a finished interview, one per target. The generic brief starts
- * automatically the first time this mounts without one; other targets
- * generate on demand. Text streams in via the doc.
+ * The prompt for a finished interview (a "brief" in the code and the model's
+ * instructions). Starts writing itself the first time this mounts without
+ * one; text streams in via the doc.
  */
 export function BriefView({
   interviewId,
@@ -43,8 +35,7 @@ export function BriefView({
   /** Extra controls for the sticky bar (e.g. Interview again). */
   actions?: React.ReactNode
 }) {
-  const [target, setTarget] = React.useState<BriefTarget>("generic")
-  const brief = useQuery(api.briefs.latestForInterview, { interviewId, target })
+  const brief = useQuery(api.briefs.latestForInterview, { interviewId })
   const generate = useAction(api.briefActions.generate)
   const [busy, setBusy] = React.useState(false)
   const autoStarted = React.useRef(false)
@@ -53,33 +44,31 @@ export function BriefView({
     async (regenerate = false) => {
       setBusy(true)
       try {
-        await generate({ interviewId, apiKey, target, regenerate })
+        await generate({ interviewId, apiKey, regenerate })
       } finally {
         setBusy(false)
       }
     },
-    [apiKey, generate, interviewId, target]
+    [apiKey, generate, interviewId]
   )
 
-  // Only the generic brief auto-starts, and only once per mount; the action
-  // itself refuses to fork a running stream.
+  // Once per mount; the action itself refuses to fork a running stream.
   React.useEffect(() => {
-    if (target === "generic" && brief === null && !autoStarted.current) {
+    if (brief === null && !autoStarted.current) {
       autoStarted.current = true
       void run()
     }
-  }, [brief, run, target])
+  }, [brief, run])
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
-            Brief
-          </p>
-          <p className="text-sm font-medium">Paste this into your agent</p>
-        </div>
-        <Segmented value={target} onChange={setTarget} />
+      <div>
+        <p className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
+          Prompt
+        </p>
+        <p className="text-sm font-medium">
+          Paste this into Claude Code, Codex, Cursor — any coding agent.
+        </p>
       </div>
 
       {brief === undefined ? null : brief === null ||
@@ -91,7 +80,7 @@ export function BriefView({
             </p>
           )}
           <Button size="sm" onClick={() => run()} disabled={busy}>
-            {busy ? <Spinner /> : `Write the ${label(target)} brief`}
+            {busy ? <Spinner /> : "Write the prompt"}
           </Button>
         </div>
       ) : (
@@ -100,21 +89,21 @@ export function BriefView({
             <Markdown>{brief.text}</Markdown>
             {brief.status === "streaming" && <span className="caret" />}
           </div>
-          {/* Stays in reach however long the brief runs; the panel scrolls behind it. */}
+          {/* Stays in reach however long the prompt runs; the panel scrolls behind it. */}
           <div className="sticky -bottom-5 -mx-5 -mb-5 flex items-center justify-between gap-2 border-t bg-background/90 px-5 py-3 backdrop-blur">
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
               {brief.status === "streaming" && <Spinner className="size-3" />}
               {brief.status === "streaming"
                 ? "Writing…"
-                : `${label(target)} · ${words(brief.text)} words`}
+                : `${words(brief.text)} words`}
             </span>
             <div className="flex items-center gap-1">
               {actions}
               <Button
                 size="icon-sm"
                 variant="ghost"
-                aria-label="Regenerate"
-                title="Regenerate"
+                aria-label="Write it again"
+                title="Write it again"
                 disabled={busy || brief.status !== "done"}
                 onClick={() => run(true)}
               >
@@ -132,46 +121,8 @@ export function BriefView({
   )
 }
 
-function label(target: BriefTarget) {
-  return TARGETS.find((t) => t.id === target)?.label ?? target
-}
-
 function words(text: string) {
   return text.trim() ? text.trim().split(/\s+/).length : 0
-}
-
-/** Three-way switch; the active pill is a plain background swap, no motion. */
-function Segmented({
-  value,
-  onChange,
-}: {
-  value: BriefTarget
-  onChange: (t: BriefTarget) => void
-}) {
-  return (
-    <div
-      role="tablist"
-      className="flex shrink-0 gap-0.5 rounded-lg bg-muted p-0.5"
-    >
-      {TARGETS.map((t) => (
-        <button
-          key={t.id}
-          role="tab"
-          type="button"
-          aria-selected={t.id === value}
-          onClick={() => onChange(t.id)}
-          className={cn(
-            "pressable rounded-md px-2 py-1 text-xs whitespace-nowrap",
-            t.id === value
-              ? "bg-background font-medium text-foreground shadow-xs"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
-  )
 }
 
 function CopyButton({ text, disabled }: { text: string; disabled: boolean }) {
@@ -179,9 +130,9 @@ function CopyButton({ text, disabled }: { text: string; disabled: boolean }) {
   return (
     <Button
       size="sm"
-      variant={copied ? "ghost" : "outline"}
+      variant={copied ? "ghost" : "default"}
       disabled={disabled}
-      aria-label="Copy the brief"
+      aria-label="Copy the prompt"
       onClick={async () => {
         await navigator.clipboard.writeText(text)
         setCopied(true)
@@ -193,7 +144,7 @@ function CopyButton({ text, disabled }: { text: string; disabled: boolean }) {
         strokeWidth={2}
         data-icon="inline-start"
       />
-      {copied ? "Copied" : "Copy"}
+      {copied ? "Copied" : "Copy prompt"}
     </Button>
   )
 }

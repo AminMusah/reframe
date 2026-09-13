@@ -8,7 +8,6 @@ import { isModelId } from "../lib/llm/models"
 import { api, internal } from "./_generated/api"
 import type { Id } from "./_generated/dataModel"
 import { action } from "./_generated/server"
-import { briefTarget } from "./schema"
 import { loadPng, toHistory } from "./helpers"
 
 /** Flush the growing text to the doc at most this often. */
@@ -23,16 +22,14 @@ export const generate = action({
   args: {
     interviewId: v.id("interviews"),
     apiKey: v.string(),
-    target: briefTarget,
     regenerate: v.optional(v.boolean()),
   },
   handler: async (
     ctx,
-    { interviewId, apiKey, target, regenerate }
+    { interviewId, apiKey, regenerate }
   ): Promise<{ id: Id<"briefs">; error?: ErrorCode }> => {
     const { id, fresh } = await ctx.runMutation(api.briefs.create, {
       interviewId,
-      target,
       regenerate,
     })
     if (!fresh) return { id }
@@ -52,7 +49,6 @@ export const generate = action({
         model: isModelId(interview.model) ? interview.model : undefined,
         graph: interview.graph,
         png,
-        target,
         transcript: toHistory(interview.turns),
         onProgress: (text) => {
           const now = Date.now()

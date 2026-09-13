@@ -85,14 +85,28 @@ Own system prompt, streamed into a `briefs` doc (see Streaming above). **Trigger
 
 Copy button. Targets (Generic / Claude Code / Cursor) differ only in a framing note appended to the brief prompt; the six sections are identical. One brief per (interview, target); Regenerate inserts a new row, the newest wins. The generic brief auto-starts; others generate on demand.
 
+## Vocabulary (what the author sees)
+
+Four nouns, one verb. Code and model prompts keep the older internal names in parentheses; only the UI copy changed.
+
+| Author sees | Meaning | In code |
+|---|---|---|
+| **Drawing** | one Excalidraw canvas with its history | `projects` table, `projectId` |
+| **Interview** | the one-question-at-a-time Q&A about a drawing | `interviews` |
+| **Prompt** | the Markdown the author pastes into a coding agent | `briefs`, `generateBrief`, `BriefView` |
+| **Generate prompt** | the verb / the panel trigger (top-right) | Excalidraw `Sidebar.Trigger name="reframe"` |
+| Reframe | the product name — never a button label | — |
+
+**One prompt for every agent** (decided 2026-09-13). The per-target variants (Generic / Claude Code / Cursor) differed by three lines of house rules, so they were folded into the standing instructions every prompt ends with: follow the repo's agent-instructions file (CLAUDE.md / AGENTS.md / .cursor/rules), run existing tests and linters, work in small steps; ask before work that depends on an open question, or state the assumption and continue if asking is impossible (Codex). `briefs.target` stays in the schema as a legacy optional field.
+
 ## UI
 
 - **The canvas is the whole window** (v1.3). There is no app header. Everything else lives in Excalidraw's own slots (`components/canvas/chrome.tsx`):
   - Main menu (☰): project group (Projects…, Rename, Delete project…), Excalidraw's export/find/clear, Model & API key, Dark/Light mode, Sign in/out, Help.
-  - Top-right: the project name (opens the Projects sheet) and the **Reframe** trigger for the panel.
+  - Top-right: the drawing's name (opens the Drawings sheet) and the **Generate prompt** trigger for the panel. While the panel is closed and an interview is underway the trigger carries a badge ("Question 4", or "Needs you" on error); while it is open it reads as pressed.
   - Welcome screen on an empty canvas: wordmark, one-line pitch, *Load an example drawing*, *How it works* (opens the panel), hints pointing at the toolbar and menu.
 - **The interview panel is an Excalidraw `Sidebar`** (`name="reframe"`, 420 px, floating over the canvas by default as an inset card; the 📌 in its header docks it, remembered in `localStorage`). Docked, Excalidraw shifts its UI and `setViewport({offsets:{ui:true}})` keeps cited elements out from under it; on narrow screens Excalidraw overlays it instead. It opens on its own when a project has an interview underway.
-- Panel states: empty (Draw → Answer → Paste, "usually 6–10 questions") with the key form as its footer until a key exists; the current question; the brief with a sticky Copy / Regenerate / Interview again bar.
+- Panel states: empty (Draw → Answer → Paste, "usually 6–10 questions") with the key form as its footer until a key exists; "Start the interview"; the current question; the prompt with a sticky Copy prompt / Write it again / Interview again bar.
 - Canvas stays interactive during the interview. Cited elements are selected, but the shape-properties island stays hidden until the author touches the canvas (`data-highlighting`), and the viewport only moves when they are off-screen.
 - Projects auto-name from the drawing's largest free-standing text while still "Untitled" (`lib/scene-title.ts`, applied in `saveScene`). Deleting a project cascades to its files, interviews and briefs.
 - Any earlier answer can be changed: *Change* on a transcript line re-asks that question; on send, `interviews.rewind` drops that answer and everything after it (briefs included), the client rebases to the current canvas and answers again.

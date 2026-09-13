@@ -64,6 +64,13 @@ function Project({ projectId }: { projectId: Id<"projects"> }) {
         projectId={projectId}
         project={project}
         panelOpen={!!interview && interview.status !== "done"}
+        panelBadge={
+          !interview || interview.status === "done"
+            ? null
+            : interview.status === "error"
+              ? "Needs you"
+              : `Question ${interview.turns.filter((t) => t.role === "assistant" && t.kind === "question").length}`
+        }
         panel={
           <InterviewPanel
             projectId={projectId}
@@ -124,9 +131,9 @@ class ProjectErrorBoundary extends React.Component<
     if (!this.state.failed) return this.props.children
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-3 text-sm">
-        <p>That project doesn&apos;t exist or isn&apos;t yours.</p>
+        <p>That drawing doesn&apos;t exist or isn&apos;t yours.</p>
         <Button variant="outline" onClick={this.props.onReset}>
-          Open my latest project
+          Open my latest drawing
         </Button>
       </div>
     )

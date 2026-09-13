@@ -150,6 +150,7 @@ export default defineSchema({
     interviewId: v.id("interviews"),
     ownerId: v.string(),
     // Absent on rows from before per-target briefs; read as "generic".
+    // Legacy: briefs were once written per target; there is one prompt now.
     target: v.optional(briefTarget),
     model: v.string(),
     text: v.string(),

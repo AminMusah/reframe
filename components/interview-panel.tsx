@@ -570,7 +570,7 @@ export function InterviewPanel({
           <div className="enter space-y-5">
             {doneTurn && (
               <Card className="space-y-1.5">
-                <CardTitle icon={SparklesIcon}>What we established</CardTitle>
+                <CardTitle icon={SparklesIcon}>What we settled on</CardTitle>
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   {doneTurn.summary}
                 </p>
@@ -623,7 +623,7 @@ export function InterviewPanel({
                   strokeWidth={2}
                   data-icon="inline-start"
                 />
-                Interview me
+                Start the interview
               </>
             )}
           </Button>
@@ -708,7 +708,7 @@ function EmptyState({ nodeCount }: { nodeCount: number }) {
   const steps = [
     ["Draw", "Boxes, arrows, scribbles, a screenshot — whatever says it."],
     ["Answer", "Usually 6–10 questions, one at a time, about what you drew."],
-    ["Paste", "A brief your coding agent can build from, in its words."],
+    ["Paste", "A prompt your coding agent can build from, in your words."],
   ] as const
   return (
     <div className="enter flex h-full flex-col justify-center gap-6 py-6">
@@ -718,8 +718,8 @@ function EmptyState({ nodeCount }: { nodeCount: number }) {
         </p>
         <p className="text-sm text-muted-foreground">
           {nodeCount === 0
-            ? "Reframe turns a drawing into a brief by asking you about it."
-            : `${nodeCount} element${nodeCount === 1 ? "" : "s"} on the canvas. Start the interview when the drawing says what you mean.`}
+            ? "Reframe turns a drawing into a prompt for your coding agent by asking you about it."
+            : `${nodeCount} element${nodeCount === 1 ? "" : "s"} on the canvas. A short interview first, then the prompt.`}
         </p>
       </div>
       <ol className="enter-stagger space-y-3">
@@ -795,7 +795,7 @@ function Transcript({
   const [open, setOpen] = React.useState(false)
   const shown = open || editing !== null
   const answered = settled.filter((t) => t.role === "user").length
-  if (settled.length === 0) return null
+  if (answered === 0) return null
   return (
     <div className="space-y-2">
       <button
@@ -1033,7 +1033,7 @@ function QuestionCard({
                 disabled={disabled}
                 className="pressable text-xs text-muted-foreground hover:text-foreground"
               >
-                Enough — write the brief
+                Enough — write the prompt
               </button>
             </div>
             <Button
@@ -1067,7 +1067,7 @@ function QuestionCard({
               disabled={disabled}
               className="pressable rounded-md px-1 py-1 text-xs text-muted-foreground hover:text-foreground"
             >
-              Enough — write the brief
+              Enough — write the prompt
             </button>
           )}
         </div>
@@ -1085,7 +1085,7 @@ function QuestionCard({
             strokeWidth={2}
             data-icon="inline-start"
           />
-          That&apos;s enough — write the brief
+          That&apos;s enough — write the prompt
         </Button>
       )}
     </div>
@@ -1179,10 +1179,15 @@ function useHighlight(
     // Selecting is how we point at things, but it also opens the shape
     // properties island. Hide that until the author touches the canvas.
     const container = document.querySelector<HTMLElement>(".excalidraw")
-    const release = () => container?.removeAttribute("data-highlighting")
+    const release = (e?: Event) => {
+      // Only a touch on the canvas itself counts, not the panel or menus.
+      if (e && !(e.target instanceof HTMLCanvasElement)) return
+      container?.removeAttribute("data-highlighting")
+      container?.removeEventListener("pointerdown", release)
+    }
     if (ids.length > 0 && container) {
       container.setAttribute("data-highlighting", "")
-      container.addEventListener("pointerdown", release, { once: true })
+      container.addEventListener("pointerdown", release)
     }
     if (elements.length > 0 && !inView(api, elements)) {
       void api.setViewport({
@@ -1194,7 +1199,17 @@ function useHighlight(
     }
     return () => {
       release()
-      container?.removeEventListener("pointerdown", release)
+      // The panel closing or the question moving on takes the selection with it.
+      if (ids.length > 0) {
+        void import("@excalidraw/excalidraw").then(
+          ({ CaptureUpdateAction }) => {
+            api.updateScene({
+              appState: { selectedElementIds: {} },
+              captureUpdate: CaptureUpdateAction.NEVER,
+            })
+          }
+        )
+      }
     }
     // idMap changes with every autosave; only the question should retrigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps

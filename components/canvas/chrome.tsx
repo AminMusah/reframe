@@ -21,7 +21,7 @@ import { useRouter } from "next/navigation"
 import * as React from "react"
 
 import { KeyDialog } from "@/components/key-dialog"
-import { ProjectsSheet, RenameDialog } from "@/components/project-menu"
+import { DrawingsSheet, RenameDialog } from "@/components/project-menu"
 import { SignInDialog } from "@/components/account-menu"
 import {
   AlertDialog,
@@ -89,7 +89,7 @@ export function Chrome({
             icon={icon(FolderOpenIcon)}
             onSelect={() => setDialog("projects")}
           >
-            Projects…
+            Drawings…
           </MainMenu.Item>
           <MainMenu.Item
             icon={icon(PencilEdit02Icon)}
@@ -101,7 +101,7 @@ export function Chrome({
             icon={icon(Delete02Icon)}
             onSelect={() => setDialog("delete")}
           >
-            Delete project…
+            Delete drawing…
           </MainMenu.Item>
         </MainMenu.Group>
         <MainMenu.Separator />
@@ -155,8 +155,8 @@ export function Chrome({
             </span>
           </WelcomeScreen.Center.Logo>
           <WelcomeScreen.Center.Heading>
-            Draw what you&apos;re building. Reframe interviews you about it and
-            writes the brief.
+            Draw what you&apos;re building. Answer a few questions. Get a prompt
+            your coding agent can build from.
           </WelcomeScreen.Center.Heading>
           <WelcomeScreen.Center.Menu>
             <WelcomeScreen.Center.MenuItem
@@ -183,12 +183,12 @@ export function Chrome({
           Draw, or paste a screenshot
         </WelcomeScreen.Hints.ToolbarHint>
         <WelcomeScreen.Hints.MenuHint>
-          Projects, export, your model &amp; key
+          Drawings, export, your model &amp; key
         </WelcomeScreen.Hints.MenuHint>
         <WelcomeScreen.Hints.HelpHint />
       </WelcomeScreen>
 
-      <ProjectsSheet
+      <DrawingsSheet
         open={dialog === "projects"}
         onOpenChange={(o) => !o && close()}
         currentId={projectId}
@@ -213,7 +213,7 @@ export function Chrome({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete “{projectName}”?</AlertDialogTitle>
             <AlertDialogDescription>
-              The drawing, its interviews and briefs are removed for good.
+              The drawing, its interviews and prompts are removed for good.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

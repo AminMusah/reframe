@@ -25,6 +25,8 @@ export type CanvasProps = {
   panel: React.ReactNode
   /** Open the panel as soon as the canvas is ready (an interview is underway). */
   panelOpen: boolean
+  /** Shown on the panel trigger while it is closed, e.g. "Question 4". */
+  panelBadge?: string | null
   onStatus?: (status: SaveStatus) => void
   onScene?: (scene: SerializedScene | null, sceneHash: string | null) => void
   onApi?: (api: ExcalidrawImperativeAPI | null) => void
@@ -35,6 +37,7 @@ export default function ExcalidrawCanvas({
   project,
   panel,
   panelOpen,
+  panelBadge,
   onStatus,
   onScene,
   onApi,
@@ -73,6 +76,7 @@ export default function ExcalidrawCanvas({
   // An interview in progress brings the panel with it on load.
   const opened = React.useRef(false)
   const [apiReady, setApiReady] = React.useState(false)
+  const [panelShown, setPanelShown] = React.useState(false)
   React.useEffect(() => {
     if (panelOpen && apiReady && !opened.current && apiRef.current) {
       opened.current = true
@@ -121,17 +125,22 @@ export default function ExcalidrawCanvas({
             <button
               type="button"
               className="sidebar-trigger max-w-48 truncate"
-              title="Projects"
+              title="Drawings"
               onClick={() => setDialog("projects")}
             >
               {project.name}
             </button>
             <Sidebar.Trigger
               name={PANEL}
-              title="Reframe — interview me about this drawing"
+              title="A short interview, then a prompt for your coding agent"
               icon={<HugeiconsIcon icon={SparklesIcon} strokeWidth={2} />}
             >
-              Reframe
+              Generate prompt
+              {panelBadge && !panelShown && (
+                <span className="rounded-full bg-foreground px-1.5 py-0.5 text-[10px] leading-none font-medium text-background">
+                  {panelBadge}
+                </span>
+              )}
             </Sidebar.Trigger>
           </>
         )}
@@ -154,6 +163,7 @@ export default function ExcalidrawCanvas({
             } catch {}
           }}
           className="reframe-panel"
+          onStateChange={(state) => setPanelShown(state?.name === PANEL)}
         >
           <Sidebar.Header>
             <span className="flex items-center gap-1.5 font-sans text-sm font-semibold tracking-tight text-foreground">
