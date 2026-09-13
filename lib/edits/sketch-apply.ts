@@ -59,13 +59,28 @@ export function applySketch(
     elements.push(...created)
   }
 
+  // Arrows that share a pair of boxes (usually one each way) run side by side.
+  const pairKey = (a: Sketch["arrows"][number]) =>
+    [a.from, a.to].sort().join("|")
+  const perPair = new Map<string, number>()
+  for (const a of sketch.arrows)
+    perPair.set(pairKey(a), (perPair.get(pairKey(a)) ?? 0) + 1)
+  const seenPair = new Map<string, number>()
+
   for (const a of sketch.arrows) {
     const from = byRef.get(a.from)
     const to = byRef.get(a.to)
     if (!from || !to) continue
+    const key = pairKey(a)
+    const n = perPair.get(key) ?? 1
+    const i = seenPair.get(key) ?? 0
+    seenPair.set(key, i + 1)
+    // Spread n arrows across the middle 40 % of the facing edges; a lone arrow stays centred.
+    const offset = n === 1 ? 0.5 : 0.3 + (0.4 * i) / (n - 1)
     const { arrow, created } = buildArrow(convert, from, to, {
       label: a.label,
       bidirectional: a.bidirectional,
+      offset,
     })
     if (!arrow) continue
     for (const end of [from, to]) {
@@ -106,26 +121,59 @@ function layout(sketch: Sketch, placement: SketchPlacement): Map<string, Box> {
     const out = new Map<string, Box>()
     for (const n of sketch.nodes) {
       const min = minSize(n)
-      const w = Math.max(min.w, n.w * base, 40)
-      const h = Math.max(min.h, n.h * base, 24)
-      // Grow around the centre the model chose, so alignment survives.
+      // Everything scales together so containers keep containing; labels set a floor.
+      const w = Math.max(min.w, n.w * base * spread, 40)
+      const h = Math.max(min.h, n.h * base * spread, 24)
       const cx = placement.x + (n.x + n.w / 2) * base * spread
       const cy = placement.y + (n.y + n.h / 2) * base * spread
       out.set(n.ref, { x: cx - w / 2, y: cy - h / 2, w, h })
     }
-    const list = [...out.values()]
-    const crowded = list.some((a, i) =>
-      list.some(
-        (b, j) =>
-          j > i &&
-          a.x < b.x + b.w + GAP &&
-          b.x < a.x + a.w + GAP &&
-          a.y < b.y + b.h + GAP &&
-          b.y < a.y + a.h + GAP
-      )
+    // Boxes joined by a labelled arrow need room for the label between them.
+    const needed = (p: string, q: string) => {
+      let gap = GAP
+      for (const a of sketch.arrows) {
+        if ((a.from === p && a.to === q) || (a.from === q && a.to === p)) {
+          gap = Math.max(
+            gap,
+            Math.min((a.label?.length ?? 0) * CHAR_W * 0.6, 240) + 40
+          )
+        }
+      }
+      return gap
+    }
+    const refs = sketch.nodes.map((n) => n.ref)
+    const crowded = refs.some((p, i) =>
+      refs.some((q, j) => {
+        if (j <= i) return false
+        const a = out.get(p)!
+        const b = out.get(q)!
+        // A container around (or mostly around) its children is not crowding.
+        if (containerish(a, b) || containerish(b, a)) return false
+        const gap = needed(p, q)
+        return (
+          a.x < b.x + b.w + gap &&
+          b.x < a.x + a.w + gap &&
+          a.y < b.y + b.h + gap &&
+          b.y < a.y + a.h + gap
+        )
+      })
     )
-    if (!crowded || spread > 2.5) return out
+    if (!crowded || spread > 2) return out
   }
+}
+
+/**
+ * `outer` is a container for `inner`: much bigger, and holding at least half
+ * of it (models often let a child poke out of a dashed boundary a little).
+ */
+function containerish(outer: Box, inner: Box): boolean {
+  if (outer.w * outer.h < inner.w * inner.h * 2.5) return false
+  const x1 = Math.max(outer.x, inner.x)
+  const y1 = Math.max(outer.y, inner.y)
+  const x2 = Math.min(outer.x + outer.w, inner.x + inner.w)
+  const y2 = Math.min(outer.y + outer.h, inner.y + inner.h)
+  const overlap = Math.max(0, x2 - x1) * Math.max(0, y2 - y1)
+  return inner.w * inner.h > 0 && overlap / (inner.w * inner.h) >= 0.5
 }
 
 /**

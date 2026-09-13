@@ -49,7 +49,7 @@ export const SKETCH_PROMPT = `You convert a picture of a diagram into editable s
 You receive an image of a drawing canvas. It contains a reference picture (a screenshot or photo of a diagram) and possibly some existing shapes. Reproduce the diagram shown in the reference picture — not the existing shapes — as nodes and arrows:
 - One node per box, ellipse, diamond, or free-standing text in the reference, with its exact label text.
 - Positions and sizes on a grid whose longer side is 100, preserving the reference's layout: relative positions, alignment, and spacing. Boxes that are side by side must not overlap; keep gaps roughly as drawn.
-- One arrow per connection, with its label and direction; two-headed connections are bidirectional. Text that sits on or beside a connection is that arrow's label — put it in the arrow, never as a separate text node.
+- One arrow per connection, with its label and direction; two-headed connections are bidirectional. Text that sits on or beside a connection is that arrow's label — put it in the arrow, never as a separate text node. Keep arrow labels to a few words (at most 6); shorten longer notes to their essence, the interview will recover the detail.
 - Leave generous gaps between boxes (at least half a box-height) and make each box wide enough for its label — the editable version needs breathing room.
 - Do not invent elements that are not in the reference. If the picture is not a diagram, return no nodes.
 The author's instruction may narrow or adjust what to reproduce; follow it.`

@@ -309,9 +309,15 @@ function overlaps(a: Box, b: Box): boolean {
 }
 
 /** Edge midpoints facing each other, plus the matching fixedPoint for each binding. */
+/**
+ * `t` slides the attachment along the facing edges (0.5 = centre), so two
+ * arrows between the same boxes can run side by side instead of on top of
+ * each other.
+ */
 function anchors(
   a: Box,
-  b: Box
+  b: Box,
+  t = 0.5
 ): [
   { x: number; y: number },
   { x: number; y: number },
@@ -323,18 +329,18 @@ function anchors(
   if (Math.abs(dx) >= Math.abs(dy)) {
     const right = dx >= 0
     return [
-      { x: right ? a.x + a.w : a.x, y: a.y + a.h / 2 },
-      { x: right ? b.x : b.x + b.w, y: b.y + b.h / 2 },
-      [right ? 1 : 0, 0.5],
-      [right ? 0 : 1, 0.5],
+      { x: right ? a.x + a.w : a.x, y: a.y + a.h * t },
+      { x: right ? b.x : b.x + b.w, y: b.y + b.h * t },
+      [right ? 1 : 0, t],
+      [right ? 0 : 1, t],
     ]
   }
   const down = dy >= 0
   return [
-    { x: a.x + a.w / 2, y: down ? a.y + a.h : a.y },
-    { x: b.x + b.w / 2, y: down ? b.y : b.y + b.h },
-    [0.5, down ? 1 : 0],
-    [0.5, down ? 0 : 1],
+    { x: a.x + a.w * t, y: down ? a.y + a.h : a.y },
+    { x: b.x + b.w * t, y: down ? b.y : b.y + b.h },
+    [t, down ? 1 : 0],
+    [t, down ? 0 : 1],
   ]
 }
 
@@ -347,12 +353,16 @@ export function buildArrow(
   convert: Convert,
   from: { id: string; box: Box },
   to: { id: string; box: Box },
-  opts: { label: string | null; bidirectional: boolean }
+  opts: { label: string | null; bidirectional: boolean; offset?: number }
 ): {
   arrow: Mutable<Extract<ExcalidrawElement, { type: "arrow" }>> | undefined
   created: Mutable<ExcalidrawElement>[]
 } {
-  const [start, end, startPoint, endPoint] = anchors(from.box, to.box)
+  const [start, end, startPoint, endPoint] = anchors(
+    from.box,
+    to.box,
+    opts.offset ?? 0.5
+  )
   const id = randomId()
   const created = convert(
     [
