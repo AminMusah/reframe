@@ -55,9 +55,16 @@ Use separate OAuth apps for the dev and prod deployments.
    `convex deploy --cmd` pushes `convex/` to prod and injects `NEXT_PUBLIC_CONVEX_URL` into the build.
 3. Update `SITE_URL` (and OAuth callback origins) whenever the Vercel domain changes.
 
+Gotchas seen on the first deploy:
+
+- Set `BETTER_AUTH_SECRET` **before** the first request reaches the prod deployment. Better Auth encrypts its signing key with whatever secret is live at that moment; changing the secret afterwards makes every token request fail with "Failed to decrypt private key". Recovery: dashboard → Data → component `betterAuth` → table `jwks` → delete the row.
+- `npx convex env set` takes a literal value; `$(openssl …)` only expands in bash. From cmd:
+  `for /f "usebackq" %s in (`node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`) do npx convex env set --prod BETTER_AUTH_SECRET %s`
+- Google's Branding page requires a privacy-policy URL before the app can be published; `/privacy` exists for that.
+
 ### Going-to-production checklist (OAuth)
 
-- [ ] Register a **prod** GitHub OAuth app with callback `https://<prod-deployment>.convex.site/api/auth/callback/github`; set `GITHUB_CLIENT_ID/SECRET` on the prod Convex deployment.
-- [ ] Register a **prod** Google OAuth client (same Google Cloud project is fine — the consent screen is shared): redirect URI `https://<prod-deployment>.convex.site/api/auth/callback/google`, JavaScript origins `https://<prod-deployment>.convex.site` and `https://<your-app>.vercel.app`; set `GOOGLE_CLIENT_ID/SECRET` on prod.
-- [ ] Google consent screen: click **Publish app** and confirm. Until then it is in Testing mode and only listed test users can sign in — on the live site too. With only the `openid`/`email`/`profile` scopes Better Auth requests, no verification review is needed; it takes effect immediately.
+- [x] Register a **prod** GitHub OAuth app with callback `https://<prod-deployment>.convex.site/api/auth/callback/github`; set `GITHUB_CLIENT_ID/SECRET` on the prod Convex deployment.
+- [x] Register a **prod** Google OAuth client (same Google Cloud project is fine — the consent screen is shared): redirect URI `https://<prod-deployment>.convex.site/api/auth/callback/google`, JavaScript origins `https://<prod-deployment>.convex.site` and `https://<your-app>.vercel.app`; set `GOOGLE_CLIENT_ID/SECRET` on prod.
+- [x] Google consent screen: click **Publish app** and confirm. Until then it is in Testing mode and only listed test users can sign in — on the live site too. With only the `openid`/`email`/`profile` scopes Better Auth requests, no verification review is needed; it takes effect immediately.
 - [ ] Projects are capped at `MAX_PROJECTS_PER_USER` (`convex/projects.ts`) since scene/PNG storage is billed to the deployment; adjust before launch if needed.
