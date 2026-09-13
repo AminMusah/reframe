@@ -61,13 +61,13 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="Cookies and analytics">
-        A session cookie keeps you signed in. There are no advertising trackers
-        and no third-party analytics.
+        A session token in your browser keeps you signed in. There are no
+        advertising trackers and no third-party analytics.
       </Section>
 
       <Section title="Deleting your data">
-        Deleting a project removes its drawing, picture, interviews and briefs.
-        To delete your account and everything under it, email the address below.
+        Email the address below and your account, projects, drawings, interviews
+        and briefs will be deleted.
       </Section>
 
       <Section title="Contact">
