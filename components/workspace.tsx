@@ -39,8 +39,13 @@ export function Workspace() {
  * interview panel all live in Excalidraw's own slots (see canvas/chrome.tsx).
  */
 function Project({ projectId }: { projectId: Id<"projects"> }) {
+  const router = useRouter()
   const project = useQuery(api.projects.get, { id: projectId })
   const interview = useQuery(api.interviews.latestForProject, { projectId })
+  // Deleted, or a link to someone else's drawing: go to the latest one.
+  React.useEffect(() => {
+    if (project === null) router.replace("/")
+  }, [project, router])
   const [status, setStatus] = React.useState<SaveStatus>("idle")
   const [scene, setScene] = React.useState<SerializedScene | null>(null)
   const [sceneHash, setSceneHash] = React.useState<string | null>(null)

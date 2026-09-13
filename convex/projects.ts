@@ -50,10 +50,15 @@ export const list = query({
   },
 })
 
+/** Null when the drawing is gone or someone else's — a state, not an error. */
 export const get = query({
   args: { id: v.id("projects") },
   handler: async (ctx, { id }) => {
-    const project = await ownedProject(ctx, id)
+    const [userId, project] = await Promise.all([
+      requireUserId(ctx),
+      ctx.db.get(id),
+    ])
+    if (!project || project.ownerId !== userId) return null
     return {
       ...project,
       sceneUrl: project.sceneFileId
