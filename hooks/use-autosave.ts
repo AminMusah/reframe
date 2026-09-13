@@ -96,7 +96,8 @@ export function useAutosave(projectId: Id<"projects">) {
       if (!stillCurrent)
         idleTimer.current = setTimeout(() => void flushRef.current(), IDLE_MS)
     } catch (err) {
-      console.error(err)
+      // Expected now and then (network blip, backend hiccup); the retry below heals it.
+      console.warn("autosave failed, retrying", err)
       setStatus("error")
       // The mirror still holds the work; try again once the connection is back.
       idleTimer.current = setTimeout(() => void flushRef.current(), MAX_WAIT_MS)
