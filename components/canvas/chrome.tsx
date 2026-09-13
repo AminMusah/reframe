@@ -1,0 +1,228 @@
+"use client"
+
+import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types"
+import { MainMenu, WelcomeScreen } from "@excalidraw/excalidraw"
+import {
+  Delete02Icon,
+  FolderOpenIcon,
+  Image02Icon,
+  Key01Icon,
+  Login03Icon,
+  Logout03Icon,
+  Moon02Icon,
+  PencilEdit02Icon,
+  SparklesIcon,
+  Sun03Icon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useMutation, useQuery } from "convex/react"
+import { useTheme } from "next-themes"
+import { useRouter } from "next/navigation"
+import * as React from "react"
+
+import { KeyDialog } from "@/components/key-dialog"
+import { ProjectsSheet, RenameDialog } from "@/components/project-menu"
+import { SignInDialog } from "@/components/account-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { api } from "@/convex/_generated/api"
+import type { Id } from "@/convex/_generated/dataModel"
+import { authClient } from "@/lib/auth-client"
+import { useApiKey } from "@/lib/llm-settings"
+import { clearMirror } from "@/lib/scene-store"
+
+const icon = (i: typeof Key01Icon) => <HugeiconsIcon icon={i} strokeWidth={2} size={16} />
+
+/**
+ * Everything that used to live in the app header, folded into Excalidraw's
+ * own menu and welcome screen so the canvas is the whole window.
+ */
+export type ChromeDialog =
+  "projects" | "rename" | "delete" | "key" | "signin" | null
+
+export function Chrome({
+  projectId,
+  projectName,
+  api: excalidraw,
+  dialog,
+  setDialog,
+  onLoadExample,
+}: {
+  projectId: Id<"projects">
+  projectName: string
+  api: React.RefObject<ExcalidrawImperativeAPI | null>
+  dialog: ChromeDialog
+  setDialog: (d: ChromeDialog) => void
+  onLoadExample: () => void
+}) {
+  const router = useRouter()
+  const { resolvedTheme, setTheme } = useTheme()
+  const [apiKey] = useApiKey()
+  const user = useQuery(api.auth.getCurrentUser)
+  const providers = useQuery(api.auth.providers)
+  const remove = useMutation(api.projects.remove)
+  const close = () => setDialog(null)
+  const anonymous =
+    !user || (user as { isAnonymous?: boolean | null }).isAnonymous
+
+  const deleteProject = async () => {
+    await remove({ id: projectId })
+    clearMirror(projectId)
+    router.replace("/")
+  }
+
+  return (
+    <>
+      <MainMenu>
+        <MainMenu.Group title={projectName}>
+          <MainMenu.Item
+            icon={icon(FolderOpenIcon)}
+            onSelect={() => setDialog("projects")}
+          >
+            Projects…
+          </MainMenu.Item>
+          <MainMenu.Item
+            icon={icon(PencilEdit02Icon)}
+            onSelect={() => setDialog("rename")}
+          >
+            Rename
+          </MainMenu.Item>
+          <MainMenu.Item
+            icon={icon(Delete02Icon)}
+            onSelect={() => setDialog("delete")}
+          >
+            Delete project…
+          </MainMenu.Item>
+        </MainMenu.Group>
+        <MainMenu.Separator />
+        <MainMenu.DefaultItems.SaveAsImage />
+        <MainMenu.DefaultItems.Export />
+        <MainMenu.DefaultItems.SearchMenu />
+        <MainMenu.DefaultItems.ClearCanvas />
+        <MainMenu.Separator />
+        <MainMenu.Item icon={icon(Key01Icon)} onSelect={() => setDialog("key")}>
+          {apiKey ? "Model & API key" : "Add an API key…"}
+        </MainMenu.Item>
+        <MainMenu.Item
+          icon={icon(resolvedTheme === "dark" ? Sun03Icon : Moon02Icon)}
+          shortcut="D"
+          onSelect={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+        >
+          {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
+        </MainMenu.Item>
+        {anonymous
+          ? (providers?.length ?? 0) > 0 && (
+              <MainMenu.Item
+                icon={icon(Login03Icon)}
+                onSelect={() => setDialog("signin")}
+              >
+                Sign in…
+              </MainMenu.Item>
+            )
+          : user && (
+              <MainMenu.Item
+                icon={icon(Logout03Icon)}
+                onSelect={async () => {
+                  await authClient.signOut()
+                  await authClient.signIn.anonymous()
+                }}
+              >
+                Sign out ({user.name || user.email})
+              </MainMenu.Item>
+            )}
+        <MainMenu.Separator />
+        <MainMenu.DefaultItems.Help />
+      </MainMenu>
+
+      <WelcomeScreen>
+        <WelcomeScreen.Center>
+          <WelcomeScreen.Center.Logo>
+            <span className="flex items-center gap-2 font-sans text-2xl font-semibold tracking-tight text-foreground">
+              <span
+                aria-hidden
+                className="inline-block size-4 rounded-[4px] bg-foreground"
+              />
+              Reframe
+            </span>
+          </WelcomeScreen.Center.Logo>
+          <WelcomeScreen.Center.Heading>
+            Draw what you&apos;re building. Reframe interviews you about it and
+            writes the brief.
+          </WelcomeScreen.Center.Heading>
+          <WelcomeScreen.Center.Menu>
+            <WelcomeScreen.Center.MenuItem
+              icon={icon(Image02Icon)}
+              onSelect={onLoadExample}
+            >
+              Load an example drawing
+            </WelcomeScreen.Center.MenuItem>
+            <WelcomeScreen.Center.MenuItem
+              icon={icon(SparklesIcon)}
+              onSelect={() =>
+                excalidraw.current?.toggleSidebar({
+                  name: "reframe",
+                  force: true,
+                })
+              }
+            >
+              How it works
+            </WelcomeScreen.Center.MenuItem>
+            <WelcomeScreen.Center.MenuItemHelp />
+          </WelcomeScreen.Center.Menu>
+        </WelcomeScreen.Center>
+        <WelcomeScreen.Hints.ToolbarHint>
+          Draw, or paste a screenshot
+        </WelcomeScreen.Hints.ToolbarHint>
+        <WelcomeScreen.Hints.MenuHint>
+          Projects, export, your model &amp; key
+        </WelcomeScreen.Hints.MenuHint>
+        <WelcomeScreen.Hints.HelpHint />
+      </WelcomeScreen>
+
+      <ProjectsSheet
+        open={dialog === "projects"}
+        onOpenChange={(o) => !o && close()}
+        currentId={projectId}
+      />
+      <RenameDialog
+        key={`${projectId}:${projectName}`}
+        open={dialog === "rename"}
+        onOpenChange={(o) => !o && close()}
+        projectId={projectId}
+        initialName={projectName}
+      />
+      <KeyDialog open={dialog === "key"} onOpenChange={(o) => !o && close()} />
+      <SignInDialog
+        open={dialog === "signin"}
+        onOpenChange={(o) => !o && close()}
+      />
+      <AlertDialog
+        open={dialog === "delete"}
+        onOpenChange={(o) => !o && close()}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete “{projectName}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The drawing, its interviews and briefs are removed for good.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={deleteProject}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}

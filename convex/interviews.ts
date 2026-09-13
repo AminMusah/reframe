@@ -126,6 +126,46 @@ export const retry = mutation({
   },
 })
 
+/**
+ * Change an earlier answer: drop that answer and everything after it, so the
+ * question before it is current again. Briefs written from the old answers
+ * are removed. The client rebases to the canvas next, then sends the new
+ * answer through the normal step.
+ */
+export const rewind = mutation({
+  args: { id: v.id("interviews"), turnIndex: v.number() },
+  handler: async (ctx, { id, turnIndex }) => {
+    const interview = await ownedInterview(ctx, id)
+    if (interview.status === "thinking") {
+      throw new ConvexError({
+        code: "busy",
+        message: "Wait for the current question",
+      })
+    }
+    const target = interview.turns[turnIndex]
+    const before = interview.turns[turnIndex - 1]
+    if (
+      !target ||
+      target.role !== "user" ||
+      !before ||
+      before.role !== "assistant" ||
+      before.kind !== "question"
+    ) {
+      throw new ConvexError({ code: "not_answer", message: "Not an answer" })
+    }
+    const briefs = await ctx.db
+      .query("briefs")
+      .withIndex("by_interview_and_createdAt", (q) => q.eq("interviewId", id))
+      .collect()
+    for (const brief of briefs) await ctx.db.delete(brief._id)
+    await ctx.db.patch(id, {
+      turns: interview.turns.slice(0, turnIndex),
+      status: "awaiting_answer",
+      lastError: undefined,
+    })
+  },
+})
+
 /** The Enough link: ends the interview without a model round-trip. */
 export const finish = mutation({
   args: { id: v.id("interviews") },

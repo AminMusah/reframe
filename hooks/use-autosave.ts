@@ -8,6 +8,7 @@ import * as React from "react"
 
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
+import { sceneTitle } from "@/lib/scene-title"
 import { markMirrorClean, writeMirror } from "@/lib/scene-store"
 import {
   hashScene,
@@ -86,7 +87,12 @@ export function useAutosave(projectId: Id<"projects">) {
       })
       if (!res.ok) throw new Error(`upload failed: ${res.status}`)
       const { storageId } = (await res.json()) as { storageId: Id<"_storage"> }
-      await saveScene({ id: projectId, storageId, sceneHash })
+      await saveScene({
+        id: projectId,
+        storageId,
+        sceneHash,
+        suggestedName: sceneTitle(snap.elements) ?? undefined,
+      })
       markMirrorClean(projectId)
       // Edits that arrived mid-upload keep the dirty state and get their own save.
       const stillCurrent =

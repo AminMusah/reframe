@@ -87,10 +87,16 @@ Copy button. Targets (Generic / Claude Code / Cursor) differ only in a framing n
 
 ## UI
 
-- Excalidraw ≈ 65 % width, collapsible right panel ≈ 35 % (`react-resizable-panels`).
-- Panel shows the transcript, the current question with option buttons + "something else" input + the Enough link, then the streamed brief.
-- Canvas stays interactive during the interview.
-- Header: Projects sheet (list / create / rename), model dropdown, key dialog.
+- **The canvas is the whole window** (v1.3). There is no app header. Everything else lives in Excalidraw's own slots (`components/canvas/chrome.tsx`):
+  - Main menu (☰): project group (Projects…, Rename, Delete project…), Excalidraw's export/find/clear, Model & API key, Dark/Light mode, Sign in/out, Help.
+  - Top-right: the project name (opens the Projects sheet) and the **Reframe** trigger for the panel.
+  - Welcome screen on an empty canvas: wordmark, one-line pitch, *Load an example drawing*, *How it works* (opens the panel), hints pointing at the toolbar and menu.
+- **The interview panel is an Excalidraw `Sidebar`** (`name="reframe"`, 440 px, docked by default and remembered in `localStorage`). Docked, Excalidraw shifts its UI and `setViewport({offsets:{ui:true}})` keeps cited elements out from under it; on narrow screens Excalidraw overlays it instead. It opens on its own when a project has an interview underway.
+- Panel states: empty (Draw → Answer → Paste, "usually 6–10 questions") with the key form as its footer until a key exists; the current question; the brief with a sticky Copy / Regenerate / Interview again bar.
+- Canvas stays interactive during the interview. Cited elements are selected, but the shape-properties island stays hidden until the author touches the canvas (`data-highlighting`), and the viewport only moves when they are off-screen.
+- Projects auto-name from the drawing's largest free-standing text while still "Untitled" (`lib/scene-title.ts`, applied in `saveScene`). Deleting a project cascades to its files, interviews and briefs.
+- Any earlier answer can be changed: *Change* on a transcript line re-asks that question; on send, `interviews.rewind` drops that answer and everything after it (briefs included), the client rebases to the current canvas and answers again.
+- From question 5 on, "That's enough — write the brief" is a real button, not a link.
 
 ### Design pass (v1.2)
 

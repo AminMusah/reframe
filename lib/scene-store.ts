@@ -33,3 +33,11 @@ export function markMirrorClean(projectId: string): void {
   const mirror = readMirror(projectId)
   if (mirror?.dirty) writeMirror(projectId, { ...mirror, dirty: false })
 }
+
+export function clearMirror(projectId: string): void {
+  try {
+    localStorage.removeItem(key(projectId))
+  } catch {
+    // Storage may be unavailable; nothing to clear then.
+  }
+}

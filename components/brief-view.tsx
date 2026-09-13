@@ -36,9 +36,12 @@ const ERROR_TEXT = {
 export function BriefView({
   interviewId,
   apiKey,
+  actions,
 }: {
   interviewId: Id<"interviews">
   apiKey: string
+  /** Extra controls for the sticky bar (e.g. Interview again). */
+  actions?: React.ReactNode
 }) {
   const [target, setTarget] = React.useState<BriefTarget>("generic")
   const brief = useQuery(api.briefs.latestForInterview, { interviewId, target })
@@ -92,15 +95,21 @@ export function BriefView({
           </Button>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border bg-card shadow-xs">
-          <div className="flex items-center justify-between border-b bg-muted/40 px-3 py-1.5">
+        <>
+          <div className="brief rounded-xl border bg-card px-4 py-3 text-sm shadow-xs">
+            <Markdown>{brief.text}</Markdown>
+            {brief.status === "streaming" && <span className="caret" />}
+          </div>
+          {/* Stays in reach however long the brief runs; the panel scrolls behind it. */}
+          <div className="sticky -bottom-5 -mx-5 -mb-5 flex items-center justify-between gap-2 border-t bg-background/90 px-5 py-3 backdrop-blur">
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
               {brief.status === "streaming" && <Spinner className="size-3" />}
               {brief.status === "streaming"
                 ? "Writing…"
                 : `${label(target)} · ${words(brief.text)} words`}
             </span>
-            <div className="flex gap-0.5">
+            <div className="flex items-center gap-1">
+              {actions}
               <Button
                 size="icon-sm"
                 variant="ghost"
@@ -117,11 +126,7 @@ export function BriefView({
               />
             </div>
           </div>
-          <div className="brief max-h-[60vh] overflow-auto px-4 py-3 text-sm">
-            <Markdown>{brief.text}</Markdown>
-            {brief.status === "streaming" && <span className="caret" />}
-          </div>
-        </div>
+        </>
       )}
     </div>
   )

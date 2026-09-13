@@ -104,6 +104,35 @@ export const openMostRecent = mutation({
   },
 })
 
+/**
+ * Remove a project and everything hanging off it: scene and PNG files, its
+ * interviews (and their PNGs), and their briefs.
+ */
+export const remove = mutation({
+  args: { id: v.id("projects") },
+  handler: async (ctx, { id }) => {
+    const project = await ownedProject(ctx, id)
+    const interviews = await ctx.db
+      .query("interviews")
+      .withIndex("by_project_and_createdAt", (q) => q.eq("projectId", id))
+      .collect()
+    for (const interview of interviews) {
+      const briefs = await ctx.db
+        .query("briefs")
+        .withIndex("by_interview_and_createdAt", (q) =>
+          q.eq("interviewId", interview._id)
+        )
+        .collect()
+      for (const brief of briefs) await ctx.db.delete(brief._id)
+      if (interview.pngFileId) await ctx.storage.delete(interview.pngFileId)
+      await ctx.db.delete(interview._id)
+    }
+    if (project.sceneFileId) await ctx.storage.delete(project.sceneFileId)
+    if (project.pngFileId) await ctx.storage.delete(project.pngFileId)
+    await ctx.db.delete(id)
+  },
+})
+
 export const rename = mutation({
   args: { id: v.id("projects"), name: v.string() },
   handler: async (ctx, { id, name }) => {
@@ -126,13 +155,17 @@ export const saveScene = mutation({
     id: v.id("projects"),
     storageId: v.id("_storage"),
     sceneHash: v.string(),
+    // A title read off the drawing; adopted only while the project is unnamed.
+    suggestedName: v.optional(v.string()),
   },
-  handler: async (ctx, { id, storageId, sceneHash }) => {
+  handler: async (ctx, { id, storageId, sceneHash, suggestedName }) => {
     const project = await ownedProject(ctx, id)
+    const name = suggestedName?.trim()
     await ctx.db.patch(id, {
       sceneFileId: storageId,
       sceneHash,
       updatedAt: Date.now(),
+      ...(name && project.name === DEFAULT_NAME ? { name } : {}),
     })
     if (project.sceneFileId && project.sceneFileId !== storageId) {
       await ctx.storage.delete(project.sceneFileId)

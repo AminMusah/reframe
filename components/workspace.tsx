@@ -7,15 +7,7 @@ import * as React from "react"
 
 import { Canvas } from "@/components/canvas"
 import { InterviewPanel } from "@/components/interview-panel"
-import { AccountMenu } from "@/components/account-menu"
-import { ProjectMenu } from "@/components/project-menu"
-import { SettingsMenu } from "@/components/settings-menu"
 import { Button } from "@/components/ui/button"
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import type { SaveStatus } from "@/hooks/use-autosave"
@@ -42,8 +34,13 @@ export function Workspace() {
   )
 }
 
+/**
+ * The canvas is the whole window. Menus, the project switcher and the
+ * interview panel all live in Excalidraw's own slots (see canvas/chrome.tsx).
+ */
 function Project({ projectId }: { projectId: Id<"projects"> }) {
   const project = useQuery(api.projects.get, { id: projectId })
+  const interview = useQuery(api.interviews.latestForProject, { projectId })
   const [status, setStatus] = React.useState<SaveStatus>("idle")
   const [scene, setScene] = React.useState<SerializedScene | null>(null)
   const [sceneHash, setSceneHash] = React.useState<string | null>(null)
@@ -62,51 +59,25 @@ function Project({ projectId }: { projectId: Id<"projects"> }) {
   if (!project) return null
 
   return (
-    <div className="flex h-dvh flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur">
-        <Wordmark />
-        <span className="text-muted-foreground/40" aria-hidden>
-          /
-        </span>
-        <ProjectMenu currentId={projectId} currentName={project.name} />
-        <SaveStatusLabel status={status} />
-        <SettingsMenu />
-        <AccountMenu />
-      </header>
-
-      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
-        <ResizablePanel defaultSize="65" minSize="30">
-          <Canvas
-            projectId={projectId}
-            project={project}
-            onStatus={setStatus}
-            onScene={onScene}
-            onApi={onApi}
-          />
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize="35" minSize="20" collapsible>
+    <div className="relative h-dvh">
+      <Canvas
+        projectId={projectId}
+        project={project}
+        panelOpen={!!interview && interview.status !== "done"}
+        panel={
           <InterviewPanel
             projectId={projectId}
             scene={scene}
             sceneHash={sceneHash}
             excalidrawApi={apiRef}
           />
-        </ResizablePanel>
-      </ResizablePanelGroup>
-    </div>
-  )
-}
-
-function Wordmark() {
-  return (
-    <span className="flex items-center gap-1.5 text-sm font-semibold tracking-tight">
-      <span
-        aria-hidden
-        className="inline-block size-2.5 rounded-[3px] bg-foreground"
+        }
+        onStatus={setStatus}
+        onScene={onScene}
+        onApi={onApi}
       />
-      Reframe
-    </span>
+      <SaveStatusLabel status={status} />
+    </div>
   )
 }
 
@@ -118,19 +89,19 @@ const STATUS_LABEL: Record<SaveStatus, string> = {
   error: "Save failed — retrying",
 }
 
-/** A dot that changes colour with the save state; the word fades in beside it. */
+/** Bottom-centre, only while there is something to say. */
 function SaveStatusLabel({ status }: { status: SaveStatus }) {
+  const quiet = status === "idle" || status === "saved"
   return (
     <span
-      className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground transition-opacity duration-200"
-      style={{ opacity: status === "idle" ? 0 : 1 }}
+      className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-background/80 px-2.5 py-1 text-xs text-muted-foreground shadow-xs backdrop-blur transition-opacity duration-200"
+      style={{ opacity: quiet ? 0 : 1 }}
       aria-live="polite"
     >
       <span
         aria-hidden
         className={cn(
-          "size-1.5 rounded-full transition-colors duration-200",
-          status === "saved" && "bg-emerald-500",
+          "size-1.5 rounded-full",
           status === "saving" && "animate-pulse bg-amber-500",
           status === "dirty" && "bg-amber-500",
           status === "error" && "bg-destructive"

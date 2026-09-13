@@ -53,6 +53,7 @@ export function InterviewPanel({
   const finish = useMutation(api.interviews.finish)
   const rebase = useMutation(api.interviews.rebase)
   const rejectEdit = useMutation(api.interviews.rejectEdit)
+  const rewind = useMutation(api.interviews.rewind)
   const generateUploadUrl = useMutation(api.projects.generateUploadUrl)
   const step = useAction(api.interviewActions.step)
   const sketchFromReference = useAction(api.sketchActions.fromReference)
@@ -60,6 +61,8 @@ export function InterviewPanel({
   const [startError, setStartError] = React.useState<string | null>(null)
   // "Keep going" silences the banner for one particular drawing state.
   const [ignoredHash, setIgnoredHash] = React.useState<string | null>(null)
+  // Index of a user turn being re-answered; the interview rewinds when sent.
+  const [editing, setEditing] = React.useState<number | null>(null)
 
   const currentQuestion = interview ? lastQuestion(interview.turns) : null
   const lastTurn = interview?.turns[interview.turns.length - 1]
@@ -206,11 +209,12 @@ export function InterviewPanel({
     const changed = excalidraw
       .getSceneElements()
       .filter((el) => changedIds.includes(el.id))
-    if (changed.length > 0) {
+    if (changed.length > 0 && !inView(excalidraw, changed)) {
       void excalidraw.setViewport({
         target: changed,
         fit: "scale-down",
         animation: true,
+        offsets: { ui: true },
       })
     }
 
@@ -347,6 +351,17 @@ export function InterviewPanel({
     if (!interview || !apiKey) return
     setBusy(true)
     try {
+      if (editing !== null) {
+        // Drop the old answer and what followed, pin to the canvas as it is
+        // now, then answer the question again.
+        const excalidraw = excalidrawApi.current
+        await rewind({ id: interview._id, turnIndex: editing })
+        if (excalidraw) await rebaseToCanvas(excalidraw, editing - 1)
+        setEditing(null)
+        setChangeState(null)
+        await step({ interviewId: interview._id, apiKey, answer: text })
+        return
+      }
       // An applied or undone change travels with the answer so the model's ids match.
       const note =
         changeState?.kind === "edit" &&
@@ -375,22 +390,18 @@ export function InterviewPanel({
     }
   }
 
-  if (!apiKey || interview?.lastError === "bad_key") {
-    return (
-      <div className="flex h-full items-center p-6">
-        <div className="enter w-full">
-          <KeyForm
-            rejected={interview?.lastError === "bad_key"}
-            onSave={setApiKey}
-          />
-        </div>
-      </div>
-    )
-  }
-
   if (interview === undefined) return null
 
   const idle = !interview || interview.status === "done"
+  const needsKey = !apiKey || interview?.lastError === "bad_key"
+  const editingQuestion =
+    editing !== null && interview
+      ? (interview.turns[editing - 1] as Extract<Turn, { kind: "question" }>)
+      : null
+  const editingAnswer =
+    editing !== null && interview
+      ? (interview.turns[editing] as Extract<Turn, { role: "user" }>)
+      : null
   const doneTurn = interview?.turns.find(
     (t): t is Extract<Turn, { kind: "done" }> =>
       t.role === "assistant" && t.kind === "done"
@@ -425,7 +436,37 @@ export function InterviewPanel({
 
         {!interview && <EmptyState nodeCount={nodeCount} />}
 
-        {interview && <Transcript turns={interview.turns} />}
+        {interview && (
+          <Transcript
+            turns={interview.turns}
+            editing={editing}
+            onEdit={
+              interview.status === "thinking" || busy
+                ? undefined
+                : (i) => setEditing(i)
+            }
+          />
+        )}
+
+        {editingQuestion && editingAnswer && (
+          <QuestionCard
+            key={`edit-${editing}`}
+            number={countQuestions(interview!.turns.slice(0, editing!))}
+            question={editingQuestion}
+            change={null}
+            disabled={busy}
+            onAnswer={answer}
+            onEnough={() => finish({ id: interview!._id })}
+            editing={{
+              previous: stripNote(editingAnswer.answer),
+              later:
+                interview!.turns
+                  .slice(editing!)
+                  .filter((t) => t.role === "user").length - 1,
+              onCancel: () => setEditing(null),
+            }}
+          />
+        )}
 
         {interview?.status === "thinking" && <Thinking />}
 
@@ -487,26 +528,28 @@ export function InterviewPanel({
           </Card>
         )}
 
-        {interview?.status === "awaiting_answer" && !sketchPending && (
-          <QuestionCard
-            key={interview.turns.length}
-            number={countQuestions(interview.turns)}
-            question={currentQuestion}
-            change={
-              changeState?.kind === "edit" && changeState.status !== "decided"
-                ? {
-                    text: changeState.text,
-                    status: changeState.status,
-                    skipped: changeState.skipped,
-                    onUndo: undoChange,
-                  }
-                : null
-            }
-            disabled={busy}
-            onAnswer={answer}
-            onEnough={() => finish({ id: interview._id })}
-          />
-        )}
+        {interview?.status === "awaiting_answer" &&
+          !sketchPending &&
+          editing === null && (
+            <QuestionCard
+              key={interview.turns.length}
+              number={countQuestions(interview.turns)}
+              question={currentQuestion}
+              change={
+                changeState?.kind === "edit" && changeState.status !== "decided"
+                  ? {
+                      text: changeState.text,
+                      status: changeState.status,
+                      skipped: changeState.skipped,
+                      onUndo: undoChange,
+                    }
+                  : null
+              }
+              disabled={busy}
+              onAnswer={answer}
+              onEnough={() => finish({ id: interview._id })}
+            />
+          )}
 
         {interview?.status === "error" && (
           <Notice tone="error" className="enter">
@@ -533,17 +576,42 @@ export function InterviewPanel({
                 </p>
               </Card>
             )}
-            <BriefView interviewId={interview._id} apiKey={apiKey} />
+            {apiKey && (
+              <BriefView
+                interviewId={interview._id}
+                apiKey={apiKey}
+                actions={
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    title="A new interview that already knows your earlier answers"
+                    onClick={() => reframe(interview._id)}
+                    disabled={busy || nodeCount === 0}
+                  >
+                    {busy ? <Spinner /> : "Interview again"}
+                  </Button>
+                }
+              />
+            )}
           </div>
         )}
       </div>
 
-      {idle && (
+      {idle && needsKey && (
+        <div className="enter border-t px-5 py-4">
+          <KeyForm
+            rejected={interview?.lastError === "bad_key"}
+            onSave={setApiKey}
+          />
+        </div>
+      )}
+
+      {!interview && !needsKey && (
         <div className="space-y-2 border-t px-5 py-4">
           <Button
             size="lg"
             className="w-full"
-            onClick={() => reframe(interview?._id)}
+            onClick={() => reframe()}
             disabled={busy || nodeCount === 0}
           >
             {busy ? (
@@ -555,16 +623,14 @@ export function InterviewPanel({
                   strokeWidth={2}
                   data-icon="inline-start"
                 />
-                {interview ? "Interview again" : "Reframe"}
+                Interview me
               </>
             )}
           </Button>
           <p className="text-center text-xs text-muted-foreground">
             {nodeCount === 0
               ? "Draw something first."
-              : interview
-                ? "A new interview that already knows your earlier answers."
-                : `Sends ${nodeCount} element${nodeCount === 1 ? "" : "s"} and a picture of the canvas.`}
+              : `Sends ${nodeCount} element${nodeCount === 1 ? "" : "s"} and a picture of the canvas.`}
           </p>
           {startError && (
             <p className="text-center text-xs text-destructive">{startError}</p>
@@ -641,7 +707,7 @@ function Notice({
 function EmptyState({ nodeCount }: { nodeCount: number }) {
   const steps = [
     ["Draw", "Boxes, arrows, scribbles, a screenshot — whatever says it."],
-    ["Answer", "A few questions, one at a time, about what you drew."],
+    ["Answer", "Usually 6–10 questions, one at a time, about what you drew."],
     ["Paste", "A brief your coding agent can build from, in its words."],
   ] as const
   return (
@@ -653,7 +719,7 @@ function EmptyState({ nodeCount }: { nodeCount: number }) {
         <p className="text-sm text-muted-foreground">
           {nodeCount === 0
             ? "Reframe turns a drawing into a brief by asking you about it."
-            : `${nodeCount} element${nodeCount === 1 ? "" : "s"} on the canvas. Click Reframe to be interviewed about them.`}
+            : `${nodeCount} element${nodeCount === 1 ? "" : "s"} on the canvas. Start the interview when the drawing says what you mean.`}
         </p>
       </div>
       <ol className="enter-stagger space-y-3">
@@ -710,7 +776,16 @@ function lastQuestion(turns: Turn[]) {
   return null
 }
 
-function Transcript({ turns }: { turns: Turn[] }) {
+function Transcript({
+  turns,
+  editing,
+  onEdit,
+}: {
+  turns: Turn[]
+  editing: number | null
+  /** Re-answer the user turn at this index; absent while the model is busy. */
+  onEdit?: (turnIndex: number) => void
+}) {
   // Everything except the turn currently being acted on.
   const last = turns[turns.length - 1]
   const settled =
@@ -718,6 +793,7 @@ function Transcript({ turns }: { turns: Turn[] }) {
       ? turns.slice(0, -1)
       : turns
   const [open, setOpen] = React.useState(false)
+  const shown = open || editing !== null
   const answered = settled.filter((t) => t.role === "user").length
   if (settled.length === 0) return null
   return (
@@ -730,12 +806,23 @@ function Transcript({ turns }: { turns: Turn[] }) {
         <span>{answered} answered</span>
         <span>{open ? "Hide" : "Show"}</span>
       </button>
-      {open && (
+      {shown && (
         <ol className="enter space-y-3 border-l pl-3 text-sm">
           {settled.map((t, i) => (
-            <li key={i}>
+            <li key={i} className={cn(editing === i && "opacity-50")}>
               {t.role === "user" ? (
-                <p className="text-foreground">{stripNote(t.answer)}</p>
+                <p className="group flex items-start justify-between gap-2 text-foreground">
+                  <span>{stripNote(t.answer)}</span>
+                  {onEdit && editing === null && (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(i)}
+                      className="pressable shrink-0 rounded px-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100"
+                    >
+                      Change
+                    </button>
+                  )}
+                </p>
               ) : t.kind === "question" ? (
                 <div className="space-y-0.5">
                   {t.change && (
@@ -777,6 +864,7 @@ function QuestionCard({
   disabled,
   onAnswer,
   onEnough,
+  editing,
 }: {
   number: number
   question: Extract<Turn, { kind: "question" }> | null
@@ -790,9 +878,11 @@ function QuestionCard({
   disabled: boolean
   onAnswer: (text: string) => void
   onEnough: () => void
+  /** Re-answering an earlier question: the old answer, how many later ones go. */
+  editing?: { previous: string; later: number; onCancel: () => void }
 }) {
   // Keyed on the turn count by the parent, so a new question starts blank.
-  const [other, setOther] = React.useState("")
+  const [other, setOther] = React.useState(editing?.previous ?? "")
   const [writing, setWriting] = React.useState(false)
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
   const options = React.useMemo(() => question?.options ?? [], [question])
@@ -855,6 +945,24 @@ function QuestionCard({
               Skipped: {change.skipped.join("; ")}
             </p>
           )}
+        </div>
+      )}
+
+      {editing && (
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs">
+          <span className="text-muted-foreground">
+            Changing your answer
+            {editing.later > 0 &&
+              ` — the ${editing.later} after it will be asked again`}
+            .
+          </span>
+          <button
+            type="button"
+            onClick={editing.onCancel}
+            className="pressable shrink-0 font-medium hover:underline"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
@@ -952,18 +1060,61 @@ function QuestionCard({
           >
             Something else…
           </button>
-          <button
-            type="button"
-            onClick={onEnough}
-            disabled={disabled}
-            className="pressable rounded-md px-1 py-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            Enough — write the brief
-          </button>
+          {number < ENOUGH_AFTER && (
+            <button
+              type="button"
+              onClick={onEnough}
+              disabled={disabled}
+              className="pressable rounded-md px-1 py-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              Enough — write the brief
+            </button>
+          )}
         </div>
+      )}
+
+      {number >= ENOUGH_AFTER && !editing && (
+        <Button
+          variant="outline"
+          className="enter w-full"
+          onClick={onEnough}
+          disabled={disabled}
+        >
+          <HugeiconsIcon
+            icon={SparklesIcon}
+            strokeWidth={2}
+            data-icon="inline-start"
+          />
+          That&apos;s enough — write the brief
+        </Button>
       )}
     </div>
   )
+}
+
+/** From this question on, stopping is offered as a real button. */
+const ENOUGH_AFTER = 5
+
+/** True when every element's box is already inside the visible canvas. */
+function inView(
+  excalidraw: ExcalidrawImperativeAPI,
+  elements: readonly ExcalidrawElement[]
+) {
+  const { scrollX, scrollY, zoom, width, height } = excalidraw.getAppState()
+  // Excalidraw measures its own UI (toolbar, docked panel) for us.
+  const m = excalidraw.getViewportOffsets({ padding: 0 })
+  const o = { top: 0, right: 0, bottom: 0, left: 0, ...m }
+  const z = zoom.value
+  return elements.every((el) => {
+    const x = (el.x + scrollX) * z
+    const y = (el.y + scrollY) * z
+    return (
+      x >= o.left &&
+      y >= o.top &&
+      x + el.width * z <= width - o.right &&
+      y + el.height * z <= height - o.bottom
+    )
+  })
 }
 
 /** Light-theme PNG capped at 1568 px on the long edge, uploaded to Convex storage. */
@@ -1025,12 +1176,25 @@ function useHighlight(
         captureUpdate: CaptureUpdateAction.NEVER,
       })
     })
-    if (elements.length > 0) {
+    // Selecting is how we point at things, but it also opens the shape
+    // properties island. Hide that until the author touches the canvas.
+    const container = document.querySelector<HTMLElement>(".excalidraw")
+    const release = () => container?.removeAttribute("data-highlighting")
+    if (ids.length > 0 && container) {
+      container.setAttribute("data-highlighting", "")
+      container.addEventListener("pointerdown", release, { once: true })
+    }
+    if (elements.length > 0 && !inView(api, elements)) {
       void api.setViewport({
         target: elements,
         fit: "scale-down",
         animation: true,
+        offsets: { ui: true },
       })
+    }
+    return () => {
+      release()
+      container?.removeEventListener("pointerdown", release)
     }
     // idMap changes with every autosave; only the question should retrigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps

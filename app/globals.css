@@ -305,3 +305,34 @@
 .brief strong {
   font-weight: 600;
 }
+
+/* Excalidraw hosts the interview panel in its sidebar slot. */
+.excalidraw > * {
+  --right-sidebar-width: 440px;
+}
+/* The library button; Reframe has no use for it. */
+.excalidraw .layer-ui__wrapper__top-right > button[title="Library"] {
+  display: none;
+}
+.excalidraw .sidebar.reframe-panel {
+  background: var(--background);
+  color: var(--foreground);
+  border-left: 1px solid var(--border);
+}
+.excalidraw .sidebar.reframe-panel .sidebar__header {
+  padding: 0.6rem 0.75rem 0.6rem 1.25rem;
+}
+.excalidraw .sidebar.reframe-panel .sidebar__header:after {
+  background: var(--border);
+  width: 100%;
+}
+/* Our top-right controls, dressed like Excalidraw's own. */
+.excalidraw .layer-ui__wrapper__top-right .sidebar-trigger {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+}
+/* The shape-properties island stays closed while a question is pointing at elements. */
+.excalidraw[data-highlighting] .App-menu__left {
+  display: none;
+}

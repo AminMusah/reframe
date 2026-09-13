@@ -1,8 +1,10 @@
 "use client"
 
-import { Excalidraw } from "@excalidraw/excalidraw"
+import { Excalidraw, Sidebar } from "@excalidraw/excalidraw"
 import "@excalidraw/excalidraw/index.css"
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types"
+import { SparklesIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { useTheme } from "next-themes"
 import * as React from "react"
 
@@ -10,11 +12,19 @@ import type { Id } from "@/convex/_generated/dataModel"
 import { useAutosave, type SaveStatus } from "@/hooks/use-autosave"
 import type { SerializedScene } from "@/lib/serializer"
 
+import { Chrome, type ChromeDialog } from "./chrome"
 import { loadScene } from "./load-scene"
+
+export const PANEL = "reframe"
+const DOCK_KEY = "reframe:panel-docked"
 
 export type CanvasProps = {
   projectId: Id<"projects">
-  project: { sceneHash?: string; sceneUrl: string | null }
+  project: { name: string; sceneHash?: string; sceneUrl: string | null }
+  /** The interview panel, rendered inside Excalidraw's sidebar slot. */
+  panel: React.ReactNode
+  /** Open the panel as soon as the canvas is ready (an interview is underway). */
+  panelOpen: boolean
   onStatus?: (status: SaveStatus) => void
   onScene?: (scene: SerializedScene | null, sceneHash: string | null) => void
   onApi?: (api: ExcalidrawImperativeAPI | null) => void
@@ -23,12 +33,24 @@ export type CanvasProps = {
 export default function ExcalidrawCanvas({
   projectId,
   project,
+  panel,
+  panelOpen,
   onStatus,
   onScene,
   onApi,
 }: CanvasProps) {
   const { resolvedTheme } = useTheme()
   const { onChange, status, scene, sceneHash, prime } = useAutosave(projectId)
+  const apiRef = React.useRef<ExcalidrawImperativeAPI | null>(null)
+  const [dialog, setDialog] = React.useState<ChromeDialog>(null)
+  // Lazy initial read: this component only renders client-side.
+  const [docked, setDocked] = React.useState(() => {
+    try {
+      return localStorage.getItem(DOCK_KEY) !== "0"
+    } catch {
+      return true
+    }
+  })
 
   React.useEffect(() => onStatus?.(status), [onStatus, status])
   React.useEffect(
@@ -47,17 +69,105 @@ export default function ExcalidrawCanvas({
     [projectId]
   )
 
+  // An interview in progress brings the panel with it on load.
+  const opened = React.useRef(false)
+  const [apiReady, setApiReady] = React.useState(false)
+  React.useEffect(() => {
+    if (panelOpen && apiReady && !opened.current && apiRef.current) {
+      opened.current = true
+      apiRef.current.toggleSidebar({ name: PANEL, force: true })
+    }
+  }, [panelOpen, apiReady])
+
+  const loadExample = async () => {
+    const api = apiRef.current
+    if (!api) return
+    const res = await fetch("/examples/three-tier.excalidraw")
+    const file = (await res.json()) as {
+      elements: unknown[]
+      appState?: Record<string, unknown>
+      files?: Record<string, unknown>
+    }
+    const { CaptureUpdateAction } = await import("@excalidraw/excalidraw")
+    api.updateScene({
+      elements: file.elements as never,
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    })
+    void api.setViewport({
+      target: api.getSceneElements(),
+      fit: "scale-down",
+      animation: true,
+      offsets: { ui: true },
+    })
+  }
+
   return (
     <div className="h-full w-full">
       <Excalidraw
         initialData={initialData}
         onChange={onChange}
-        onExcalidrawAPI={(api) => onApi?.(api)}
+        onExcalidrawAPI={(api) => {
+          apiRef.current = api
+          setApiReady(true)
+          onApi?.(api)
+        }}
         theme={resolvedTheme === "dark" ? "dark" : "light"}
         UIOptions={{
           canvasActions: { loadScene: false, saveToActiveFile: false },
         }}
-      />
+        renderTopRightUI={() => (
+          <>
+            <button
+              type="button"
+              className="sidebar-trigger max-w-48 truncate"
+              title="Projects"
+              onClick={() => setDialog("projects")}
+            >
+              {project.name}
+            </button>
+            <Sidebar.Trigger
+              name={PANEL}
+              title="Reframe — interview me about this drawing"
+              icon={<HugeiconsIcon icon={SparklesIcon} strokeWidth={2} />}
+            >
+              Reframe
+            </Sidebar.Trigger>
+          </>
+        )}
+      >
+        <Chrome
+          projectId={projectId}
+          projectName={project.name}
+          api={apiRef}
+          dialog={dialog}
+          setDialog={setDialog}
+          onLoadExample={loadExample}
+        />
+        <Sidebar
+          name={PANEL}
+          docked={docked}
+          onDock={(d) => {
+            setDocked(d)
+            try {
+              localStorage.setItem(DOCK_KEY, d ? "1" : "0")
+            } catch {}
+          }}
+          className="reframe-panel"
+        >
+          <Sidebar.Header>
+            <span className="flex items-center gap-1.5 font-sans text-sm font-semibold tracking-tight text-foreground">
+              <span
+                aria-hidden
+                className="inline-block size-2.5 rounded-[3px] bg-foreground"
+              />
+              Reframe
+            </span>
+          </Sidebar.Header>
+          <div className="min-h-0 flex-1 font-sans text-foreground">
+            {panel}
+          </div>
+        </Sidebar>
+      </Excalidraw>
     </div>
   )
 }
