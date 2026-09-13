@@ -6,6 +6,7 @@ import { useAction, useMutation, useQuery } from "convex/react"
 import * as React from "react"
 
 import { BriefView } from "@/components/brief-view"
+import { SketchTool } from "@/components/sketch-tool"
 import { KeyForm } from "@/components/key-form"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
@@ -352,7 +353,15 @@ ${serialized.text}`,
       </div>
 
       {idle && (
-        <div className="space-y-2 border-t p-4">
+        <div className="space-y-3 border-t p-4">
+          <SketchTool
+            excalidrawApi={excalidrawApi}
+            apiKey={apiKey}
+            model={model}
+            hasImage={
+              scene?.graph.nodes.some((n) => n.kind === "image") ?? false
+            }
+          />
           <Button
             className="w-full"
             onClick={() => reframe(interview?._id)}
@@ -489,7 +498,7 @@ function QuestionCard({
 }
 
 /** Light-theme PNG capped at 1568 px on the long edge, uploaded to Convex storage. */
-async function exportPng(
+export async function exportPng(
   excalidraw: ExcalidrawImperativeAPI,
   generateUploadUrl: () => Promise<string>
 ): Promise<Id<"_storage"> | undefined> {

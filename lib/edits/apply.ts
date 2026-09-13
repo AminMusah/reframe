@@ -120,34 +120,11 @@ export function applyEdit(input: ApplyInput): ApplyResult {
           )
           break
         }
-        const [start, end, startPoint, endPoint] = anchors(from.box, to.box)
-        const id = randomId()
-        const created = create({
-          type: "arrow",
-          id,
-          x: start.x,
-          y: start.y,
-          points: [
-            [0, 0],
-            [end.x - start.x, end.y - start.y],
-          ],
-          startArrowhead: op.bidirectional ? "arrow" : null,
-          endArrowhead: "arrow",
-          ...(op.label ? { label: { text: op.label } } : {}),
-        } as unknown as Skeleton)
-        const arrow = created.find((el) => el.id === id) as
-          Mutable<Extract<ExcalidrawElement, { type: "arrow" }>> | undefined
+        const { arrow, created } = buildArrow(convert, from, to, {
+          label: op.label,
+          bidirectional: op.bidirectional,
+        })
         if (!arrow) break
-        arrow.startBinding = {
-          elementId: from.id,
-          fixedPoint: startPoint,
-          mode: "orbit",
-        }
-        arrow.endBinding = {
-          elementId: to.id,
-          fixedPoint: endPoint,
-          mode: "orbit",
-        }
         for (const endId of [from.id, to.id]) {
           const target = byId.get(endId) ?? added.find((el) => el.id === endId)
           if (!target) continue
@@ -359,6 +336,57 @@ function anchors(
     [0.5, down ? 1 : 0],
     [0.5, down ? 0 : 1],
   ]
+}
+
+/**
+ * A bound arrow between two boxes, made by hand because the converter only
+ * binds to elements created in the same call. Callers add the arrow to the
+ * endpoints' `boundElements` themselves.
+ */
+export function buildArrow(
+  convert: Convert,
+  from: { id: string; box: Box },
+  to: { id: string; box: Box },
+  opts: { label: string | null; bidirectional: boolean }
+): {
+  arrow: Mutable<Extract<ExcalidrawElement, { type: "arrow" }>> | undefined
+  created: Mutable<ExcalidrawElement>[]
+} {
+  const [start, end, startPoint, endPoint] = anchors(from.box, to.box)
+  const id = randomId()
+  const created = convert(
+    [
+      {
+        type: "arrow",
+        id,
+        x: start.x,
+        y: start.y,
+        points: [
+          [0, 0],
+          [end.x - start.x, end.y - start.y],
+        ],
+        startArrowhead: opts.bidirectional ? "arrow" : null,
+        endArrowhead: "arrow",
+        ...(opts.label ? { label: { text: opts.label } } : {}),
+      } as unknown as Skeleton,
+    ],
+    { regenerateIds: false }
+  ).map((el) => ({ ...el, index: null })) as Mutable<ExcalidrawElement>[]
+  const arrow = created.find((el) => el.id === id) as
+    Mutable<Extract<ExcalidrawElement, { type: "arrow" }>> | undefined
+  if (arrow) {
+    arrow.startBinding = {
+      elementId: from.id,
+      fixedPoint: startPoint,
+      mode: "orbit",
+    }
+    arrow.endBinding = { elementId: to.id, fixedPoint: endPoint, mode: "orbit" }
+  }
+  return { arrow, created }
+}
+
+export function randomElementId(): string {
+  return randomId()
 }
 
 function isLinear(el: ExcalidrawElement | undefined): boolean {

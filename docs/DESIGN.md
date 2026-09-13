@@ -164,6 +164,10 @@ Scenes and PNGs go in file storage (docs are capped at 1 MB). Turns live as an a
 6. `scripts/eval.ts`. ✅
 7. GitHub/Google upgrade + Vercel deploy. ✅ (code + README; OAuth apps and the Vercel project are set up by hand)
 
+### Sketch from reference (v1.2) — built
+
+Agent edits are deliberately coarse and cannot reproduce a picture or fix spacing. When the canvas holds an image (a screenshot, a photo of a whiteboard), the panel offers **Sketch from reference**: the client exports the canvas PNG, `sketchActions.fromReference` (Node, stores nothing, deletes the PNG after reading) asks a vision model for `{ canvas: {w,h}, nodes: [{ref,type,label,x,y,w,h}], arrows: [{from,to,label,bidirectional}] }` on a grid whose longer side is 100 (`lib/llm/sketch.ts`), and `lib/edits/sketch-apply.ts` scales it to ≥ 900 px and builds shapes via `convertToExcalidrawElements` plus hand-bound arrows (`buildArrow`, shared with edits). "Sketch below" adds under everything; "Replace shapes" deletes non-image, non-frame elements and places the sketch under the pictures. Undo restores the snapshot. Verified with GPT-5.6 Terra on a photo of the three-tier fixture.
+
 ## Open items (decide when reached)
 
-- What "something else" does when the user's text implies a redraw before agent edits exist (v1: carry the text forward as an answer).
+- What "something else" does when the user's text implies a redraw: v1.1 edits handle small changes; "reproduce this picture" goes to Sketch from reference (the interviewer says so).
