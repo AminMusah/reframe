@@ -113,7 +113,6 @@ export function Chrome({
         </MainMenu.Item>
         <MainMenu.Item
           icon={icon(resolvedTheme === "dark" ? Sun03Icon : Moon02Icon)}
-          shortcut="D"
           onSelect={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
         >
           {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}

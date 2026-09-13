@@ -43,12 +43,13 @@ export default function ExcalidrawCanvas({
   const { onChange, status, scene, sceneHash, prime } = useAutosave(projectId)
   const apiRef = React.useRef<ExcalidrawImperativeAPI | null>(null)
   const [dialog, setDialog] = React.useState<ChromeDialog>(null)
-  // Lazy initial read: this component only renders client-side.
+  // Floats over the canvas unless the author pins it. Lazy initial read:
+  // this component only renders client-side.
   const [docked, setDocked] = React.useState(() => {
     try {
-      return localStorage.getItem(DOCK_KEY) !== "0"
+      return localStorage.getItem(DOCK_KEY) === "1"
     } catch {
-      return true
+      return false
     }
   })
 
