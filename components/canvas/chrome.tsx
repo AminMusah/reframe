@@ -5,6 +5,7 @@ import { MainMenu, WelcomeScreen } from "@excalidraw/excalidraw"
 import {
   Delete02Icon,
   FolderOpenIcon,
+  HelpCircleIcon,
   Image02Icon,
   Key01Icon,
   Login03Icon,
@@ -20,6 +21,7 @@ import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 
+import { HelpDialog } from "@/components/help-dialog"
 import { KeyDialog } from "@/components/key-dialog"
 import { DrawingsSheet, RenameDialog } from "@/components/project-menu"
 import { SignInDialog } from "@/components/account-menu"
@@ -48,7 +50,7 @@ const icon = (i: typeof Key01Icon) => (
  * own menu and welcome screen so the canvas is the whole window.
  */
 export type ChromeDialog =
-  "projects" | "rename" | "delete" | "key" | "signin" | null
+  "projects" | "rename" | "delete" | "key" | "signin" | "help" | null
 
 export function Chrome({
   projectId,
@@ -74,6 +76,19 @@ export function Chrome({
   const close = () => setDialog(null)
   const anonymous =
     !user || (user as { isAnonymous?: boolean | null }).isAnonymous
+
+  // "?" opens ours; Excalidraw's own help button is hidden.
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "?" || e.metaKey || e.ctrlKey) return
+      const t = e.target as HTMLElement | null
+      if (t?.closest("input, textarea, [contenteditable]")) return
+      e.preventDefault()
+      setDialog("help")
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [setDialog])
 
   const deleteProject = async () => {
     await remove({ id: projectId })
@@ -106,7 +121,6 @@ export function Chrome({
         </MainMenu.Group>
         <MainMenu.Separator />
         <MainMenu.DefaultItems.SaveAsImage />
-        <MainMenu.DefaultItems.Export />
         <MainMenu.DefaultItems.SearchMenu />
         <MainMenu.DefaultItems.ClearCanvas />
         <MainMenu.Separator />
@@ -140,7 +154,13 @@ export function Chrome({
               </MainMenu.Item>
             )}
         <MainMenu.Separator />
-        <MainMenu.DefaultItems.Help />
+        <MainMenu.Item
+          icon={icon(HelpCircleIcon)}
+          shortcut="?"
+          onSelect={() => setDialog("help")}
+        >
+          Keyboard shortcuts
+        </MainMenu.Item>
       </MainMenu>
 
       <WelcomeScreen>
@@ -176,7 +196,13 @@ export function Chrome({
             >
               How it works
             </WelcomeScreen.Center.MenuItem>
-            <WelcomeScreen.Center.MenuItemHelp />
+            <WelcomeScreen.Center.MenuItem
+              icon={icon(HelpCircleIcon)}
+              shortcut="?"
+              onSelect={() => setDialog("help")}
+            >
+              Keyboard shortcuts
+            </WelcomeScreen.Center.MenuItem>
           </WelcomeScreen.Center.Menu>
         </WelcomeScreen.Center>
         <WelcomeScreen.Hints.ToolbarHint>
@@ -185,7 +211,6 @@ export function Chrome({
         <WelcomeScreen.Hints.MenuHint>
           Drawings, export, your model &amp; key
         </WelcomeScreen.Hints.MenuHint>
-        <WelcomeScreen.Hints.HelpHint />
       </WelcomeScreen>
 
       <DrawingsSheet
@@ -201,6 +226,10 @@ export function Chrome({
         initialName={projectName}
       />
       <KeyDialog open={dialog === "key"} onOpenChange={(o) => !o && close()} />
+      <HelpDialog
+        open={dialog === "help"}
+        onOpenChange={(o) => !o && close()}
+      />
       <SignInDialog
         open={dialog === "signin"}
         onOpenChange={(o) => !o && close()}

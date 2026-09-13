@@ -379,3 +379,85 @@
   background: var(--background);
   color: var(--foreground);
 }
+
+/* ---------- Excalidraw wears our tokens ----------
+   Every Excalidraw island, menu and dialog reads these variables. They point
+   at our design tokens (never literal colours), so changing the design system
+   in :root / .dark restyles the editor chrome too. The canvas itself is
+   untouched. */
+/* `:root` prefix: Excalidraw's stylesheet loads after ours, so we need to win on specificity. */
+:root .excalidraw,
+:root .excalidraw.theme--dark {
+  --ui-font: var(--font-sans);
+
+  /* surfaces */
+  --island-bg-color: var(--card);
+  --island-bg-color-alt: var(--card);
+  --popup-bg-color: var(--popover);
+  --popup-secondary-bg-color: var(--muted);
+  --sidebar-bg-color: var(--background);
+  --default-bg-color: var(--background);
+  --color-surface-lowest: var(--background);
+  --color-surface-low: var(--muted);
+  --color-surface-mid: var(--muted);
+  --color-surface-high: var(--accent);
+  --overlay-bg-color: color-mix(in oklab, var(--background) 70%, transparent);
+
+  /* text & icons */
+  --color-on-surface: var(--foreground);
+  --text-primary-color: var(--foreground);
+  --icon-fill-color: var(--foreground);
+  --popup-text-color: var(--foreground);
+  --color-muted: var(--muted-foreground);
+  --color-muted-darker: var(--muted-foreground);
+  --color-muted-darkest: var(--foreground);
+  --color-muted-background: var(--muted);
+  --color-muted-background-darker: var(--accent);
+  --keybinding-color: var(--muted-foreground);
+  --link-color: var(--foreground);
+  --link-color-hover: var(--foreground);
+
+  /* borders, radius, shadow */
+  --default-border-color: var(--border);
+  --dialog-border-color: var(--border);
+  --sidebar-border-color: var(--border);
+  --input-border-color: var(--input);
+  --color-border-outline: var(--border);
+  --color-border-outline-variant: var(--border);
+  --button-gray-1: var(--muted);
+  --button-gray-2: var(--border);
+  --button-gray-3: var(--muted-foreground);
+  --border-radius-lg: var(--radius);
+  --border-radius-md: calc(var(--radius) * 0.8);
+  --shadow-island:
+    0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.04),
+    0 8px 24px -12px rgb(0 0 0 / 0.18);
+  --shadow-island-stronger:
+    0 0 0 1px var(--border), 0 2px 4px rgb(0 0 0 / 0.06),
+    0 12px 32px -12px rgb(0 0 0 / 0.28);
+  --sidebar-shadow: var(--shadow-island-stronger);
+  --modal-shadow: var(--shadow-island-stronger);
+
+  /* the accent: neutral instead of purple */
+  --color-primary: var(--foreground);
+  --color-primary-darker: var(--foreground);
+  --color-primary-darkest: var(--foreground);
+  --color-primary-hover: var(--foreground);
+  --color-brand-active: var(--foreground);
+  --color-brand-hover: var(--foreground);
+  --color-primary-light: var(--accent);
+  --color-primary-light-darker: var(--accent);
+  --color-surface-primary-container: var(--foreground);
+  --color-on-primary-container: var(--background);
+  --button-hover-bg: var(--accent);
+  --button-active-bg: var(--accent);
+  --button-active-border: var(--foreground);
+  --focus-highlight-color: var(--ring);
+  --select-highlight-color: var(--ring);
+  --color-slider-track: var(--border);
+  --color-slider-thumb: var(--foreground);
+}
+/* Excalidraw's own help button and dialog are replaced by ours (see chrome.tsx). */
+:root .excalidraw .help-icon {
+  display: none;
+}
