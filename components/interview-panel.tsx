@@ -6,7 +6,6 @@ import { useAction, useMutation, useQuery } from "convex/react"
 import * as React from "react"
 
 import { BriefView } from "@/components/brief-view"
-import { SketchTool } from "@/components/sketch-tool"
 import { KeyForm } from "@/components/key-form"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
@@ -14,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/convex/_generated/api"
 import type { Doc, Id } from "@/convex/_generated/dataModel"
 import { applyEdit, describeOp } from "@/lib/edits/apply"
+import { applySketch, placeSketch } from "@/lib/edits/sketch-apply"
 import { useApiKey, useModel } from "@/lib/llm-settings"
 import {
   hashScene,
@@ -45,6 +45,7 @@ export function InterviewPanel({
   const rejectEdit = useMutation(api.interviews.rejectEdit)
   const generateUploadUrl = useMutation(api.projects.generateUploadUrl)
   const step = useAction(api.interviewActions.step)
+  const sketchFromReference = useAction(api.sketchActions.fromReference)
   const [busy, setBusy] = React.useState(false)
   const [startError, setStartError] = React.useState<string | null>(null)
   // "Keep going" silences the banner for one particular drawing state.
@@ -52,10 +53,12 @@ export function InterviewPanel({
 
   const currentQuestion = interview ? lastQuestion(interview.turns) : null
   const lastTurn = interview?.turns[interview.turns.length - 1]
+  // A change the model proposed and the author has not decided on yet: an
+  // edit (ops) or a sketch (redraw a picture on the canvas).
   const pendingEdit =
     interview?.status === "awaiting_answer" &&
     lastTurn?.role === "assistant" &&
-    lastTurn.kind === "edit"
+    (lastTurn.kind === "edit" || lastTurn.kind === "sketch")
       ? lastTurn
       : null
   const editKey = pendingEdit ? interview!.turns.length : null
@@ -74,6 +77,9 @@ export function InterviewPanel({
     snapshot: readonly ExcalidrawElement[]
     skipped: string[]
     decided: boolean
+    /** Sketches take a model call; the card shows progress and failures. */
+    working?: boolean
+    failed?: string
   } | null>(null)
 
   const applyPending = async () => {
@@ -82,26 +88,87 @@ export function InterviewPanel({
     const { convertToExcalidrawElements, CaptureUpdateAction } =
       await import("@excalidraw/excalidraw")
     const elements = excalidraw.getSceneElements()
-    const serialized = serializeScene(elements)
-    const result = applyEdit({
-      elements,
-      ops: pendingEdit.ops,
-      idMap: serialized.idMap,
-      boxes: serialized.boxes,
-      convert: convertToExcalidrawElements,
-    })
+
+    let next: readonly ExcalidrawElement[]
+    let changedIds: string[]
+    let skipped: string[] = []
+    if (pendingEdit.kind === "edit") {
+      const serialized = serializeScene(elements)
+      const result = applyEdit({
+        elements,
+        ops: pendingEdit.ops,
+        idMap: serialized.idMap,
+        boxes: serialized.boxes,
+        convert: convertToExcalidrawElements,
+      })
+      next = result.elements
+      changedIds = result.changedIds
+      skipped = result.skipped
+    } else {
+      // Sketch: photograph the canvas, ask the vision model for shapes on a grid,
+      // build them. The PNG upload is transient; the action deletes it.
+      setEditState({
+        key: editKey,
+        snapshot: elements,
+        skipped: [],
+        decided: false,
+        working: true,
+      })
+      try {
+        const pngFileId = await exportPng(excalidraw, generateUploadUrl)
+        if (!pngFileId) throw new Error("Nothing on the canvas to read")
+        const result = await sketchFromReference({
+          pngFileId,
+          apiKey: apiKey!,
+          model: interview!.model,
+          instruction: pendingEdit.instruction || undefined,
+        })
+        if ("error" in result) throw new Error(result.message)
+        if (result.sketch.nodes.length === 0) {
+          throw new Error("No diagram was found in the picture")
+        }
+        const placement = placeSketch(elements, pendingEdit.mode)
+        const built = applySketch(
+          result.sketch,
+          placement,
+          convertToExcalidrawElements
+        )
+        const kept =
+          pendingEdit.mode === "replace"
+            ? elements.map((el) =>
+                el.type === "image" ||
+                el.type === "frame" ||
+                el.type === "magicframe"
+                  ? el
+                  : { ...el, isDeleted: true, version: el.version + 1 }
+              )
+            : [...elements]
+        next = [...kept, ...built.elements]
+        changedIds = built.ids
+      } catch (err) {
+        setEditState({
+          key: editKey,
+          snapshot: elements,
+          skipped: [],
+          decided: false,
+          failed: err instanceof Error ? err.message : String(err),
+        })
+        return
+      }
+    }
+
     excalidraw.updateScene({
-      elements: result.elements,
+      elements: next,
       appState: {
         selectedElementIds: Object.fromEntries(
-          result.changedIds.map((id) => [id, true])
+          changedIds.map((id) => [id, true])
         ),
       },
       captureUpdate: CaptureUpdateAction.IMMEDIATELY,
     })
     const changed = excalidraw
       .getSceneElements()
-      .filter((el) => result.changedIds.includes(el.id))
+      .filter((el) => changedIds.includes(el.id))
     if (changed.length > 0) {
       void excalidraw.setViewport({
         target: changed,
@@ -112,7 +179,7 @@ export function InterviewPanel({
     setEditState({
       key: editKey,
       snapshot: elements,
-      skipped: result.skipped,
+      skipped,
       decided: false,
     })
   }
@@ -292,11 +359,27 @@ ${serialized.text}`,
         {pendingEdit && (
           <div className="space-y-3 rounded-md border p-3 text-sm">
             <p className="font-medium">✎ {pendingEdit.text}</p>
-            <ul className="list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
-              {pendingEdit.ops.map((op, i) => (
-                <li key={i}>{describeOp(op)}</li>
-              ))}
-            </ul>
+            {pendingEdit.kind === "edit" ? (
+              <ul className="list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
+                {pendingEdit.ops.map((op, i) => (
+                  <li key={i}>{describeOp(op)}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {pendingEdit.mode === "replace"
+                  ? "Redrawing the picture as editable shapes and clearing the earlier attempt."
+                  : "Redrawing the picture as editable shapes below the drawing."}
+              </p>
+            )}
+            {editState?.key === editKey && editState.working && (
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Spinner /> Reading the picture…
+              </p>
+            )}
+            {editState?.key === editKey && editState.failed && (
+              <p className="text-xs text-destructive">{editState.failed}</p>
+            )}
             {editState?.skipped.length ? (
               <p className="text-xs text-destructive">
                 Skipped: {editState.skipped.join("; ")}
@@ -305,6 +388,22 @@ ${serialized.text}`,
             <div className="flex gap-2">
               {editState?.key === editKey && editState.decided ? (
                 <Spinner />
+              ) : editState?.key === editKey &&
+                editState.working ? null : editState?.key === editKey &&
+                editState.failed ? (
+                <>
+                  <Button size="sm" onClick={applyPending} disabled={busy}>
+                    Try again
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={undoEdit}
+                    disabled={busy}
+                  >
+                    Skip
+                  </Button>
+                </>
               ) : editState?.key === editKey ? (
                 <>
                   <Button size="sm" onClick={acceptEdit} disabled={busy}>
@@ -354,14 +453,6 @@ ${serialized.text}`,
 
       {idle && (
         <div className="space-y-3 border-t p-4">
-          <SketchTool
-            excalidrawApi={excalidrawApi}
-            apiKey={apiKey}
-            model={model}
-            hasImage={
-              scene?.graph.nodes.some((n) => n.kind === "image") ?? false
-            }
-          />
           <Button
             className="w-full"
             onClick={() => reframe(interview?._id)}
@@ -419,7 +510,7 @@ function Transcript({ turns }: { turns: Turn[] }) {
             <p className="rounded-md bg-accent px-3 py-2">{t.answer}</p>
           ) : t.kind === "question" ? (
             <p className="text-muted-foreground">{t.text}</p>
-          ) : t.kind === "edit" ? (
+          ) : t.kind === "edit" || t.kind === "sketch" ? (
             <p className="text-muted-foreground">
               ✎ {t.text}
               {t.applied === false && " (undone)"}

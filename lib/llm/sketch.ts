@@ -49,7 +49,8 @@ export const SKETCH_PROMPT = `You convert a picture of a diagram into editable s
 You receive an image of a drawing canvas. It contains a reference picture (a screenshot or photo of a diagram) and possibly some existing shapes. Reproduce the diagram shown in the reference picture — not the existing shapes — as nodes and arrows:
 - One node per box, ellipse, diamond, or free-standing text in the reference, with its exact label text.
 - Positions and sizes on a grid whose longer side is 100, preserving the reference's layout: relative positions, alignment, and spacing. Boxes that are side by side must not overlap; keep gaps roughly as drawn.
-- One arrow per connection, with its label and direction; two-headed connections are bidirectional.
+- One arrow per connection, with its label and direction; two-headed connections are bidirectional. Text that sits on or beside a connection is that arrow's label — put it in the arrow, never as a separate text node.
+- Leave generous gaps between boxes (at least half a box-height) and make each box wide enough for its label — the editable version needs breathing room.
 - Do not invent elements that are not in the reference. If the picture is not a diagram, return no nodes.
 The author's instruction may narrow or adjust what to reproduce; follow it.`
 
@@ -122,9 +123,16 @@ export function normalize(sketch: Sketch): Sketch {
   const arrows = sketch.arrows.filter(
     (a) => seen.has(a.from) && seen.has(a.to) && a.from !== a.to
   )
+  // Models often list an arrow's label a second time as free text; keep the arrow's.
+  const arrowLabels = new Set(
+    arrows.map((a) => a.label?.trim().toLowerCase()).filter(Boolean)
+  )
+  const deduped = nodes.filter(
+    (n) => !(n.type === "text" && arrowLabels.has(n.label.trim().toLowerCase()))
+  )
   const w = clamp(sketch.canvas.w || 100, 10, 100)
   const h = clamp(sketch.canvas.h || 100, 10, 100)
-  return { canvas: { w, h }, nodes, arrows }
+  return { canvas: { w, h }, nodes: deduped, arrows }
 }
 
 function clamp(v: number, lo: number, hi: number) {

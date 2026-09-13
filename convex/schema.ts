@@ -59,12 +59,27 @@ export const editTurn = v.object({
   applied: v.optional(v.boolean()),
 })
 
+export const sketchTurn = v.object({
+  role: v.literal("assistant"),
+  kind: v.literal("sketch"),
+  text: v.string(),
+  instruction: v.string(),
+  mode: v.union(v.literal("add"), v.literal("replace")),
+  applied: v.optional(v.boolean()),
+})
+
 export const answerTurn = v.object({
   role: v.literal("user"),
   answer: v.string(),
 })
 
-export const turn = v.union(questionTurn, editTurn, doneTurn, answerTurn)
+export const turn = v.union(
+  questionTurn,
+  editTurn,
+  sketchTurn,
+  doneTurn,
+  answerTurn
+)
 
 export const interviewStatus = v.union(
   v.literal("thinking"),

@@ -27,6 +27,13 @@ export function toHistory(turns: Doc<"interviews">["turns"]): HistoryEntry[] {
         turn: { kind: "edit", text: t.text, ops: t.ops },
       }
     }
+    if (t.kind === "sketch") {
+      const { text, instruction, mode } = t
+      return {
+        role: "assistant",
+        turn: { kind: "sketch", text, instruction, mode },
+      }
+    }
     return { role: "assistant", turn: { kind: "done", summary: t.summary } }
   })
 }

@@ -9,9 +9,15 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server"
-import { doneTurn, editTurn, errorCode, questionTurn } from "./schema"
+import {
+  doneTurn,
+  editTurn,
+  errorCode,
+  questionTurn,
+  sketchTurn,
+} from "./schema"
 
-const assistantTurn = v.union(questionTurn, editTurn, doneTurn)
+const assistantTurn = v.union(questionTurn, editTurn, sketchTurn, doneTurn)
 
 async function requireUserId(ctx: QueryCtx | MutationCtx): Promise<string> {
   const user = await authComponent.getAuthUser(ctx)
@@ -189,7 +195,12 @@ export const rejectEdit = mutation({
 
 function markLastEdit(turns: Doc<"interviews">["turns"], applied: boolean) {
   const last = turns[turns.length - 1]
-  if (!last || last.role !== "assistant" || last.kind !== "edit") return turns
+  if (
+    !last ||
+    last.role !== "assistant" ||
+    (last.kind !== "edit" && last.kind !== "sketch")
+  )
+    return turns
   return [...turns.slice(0, -1), { ...last, applied }]
 }
 

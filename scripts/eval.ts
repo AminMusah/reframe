@@ -139,7 +139,7 @@ async function withBackoff<T>(label: string, fn: () => Promise<T>): Promise<T> {
         : String((cause as Error)?.message ?? "")
       const quota = status === 429 || /quota|rate limit/i.test(body)
       if (!quota || attempt > 4) throw err
-      const hinted = /retryDelay"?:s*"?(d+)s/.exec(body)?.[1]
+      const hinted = /retryDelay"?:\s*"?(\d+)s/.exec(body)?.[1]
       const wait = hinted ? Number(hinted) * 1000 + 1000 : 15_000 * attempt
       console.error(
         `  rate limited (${label}); waiting ${Math.round(wait / 1000)}s`
@@ -226,11 +226,11 @@ async function main() {
         say(`  done: ${turn.summary}`)
         break
       }
-      if (turn.kind === "edit") {
+      if (turn.kind === "edit" || turn.kind === "sketch") {
         // Text-only run: nothing can apply the edit, so the author undoes it.
         // Accepting would leave the model expecting ids that never appear.
         edits++
-        say(`  EDIT (undone): ${turn.text} (${turn.ops.length} ops)`)
+        say(`  ${turn.kind.toUpperCase()} (undone): ${turn.text}`)
         history.push({
           role: "user",
           answer:
@@ -416,8 +416,8 @@ async function judge(
         ? `AUTHOR: ${h.answer}`
         : h.turn.kind === "question"
           ? `INTERVIEWER: ${h.turn.text}\n  options: ${h.turn.options.join(" | ")}\n  cites: ${h.turn.elementIds.join(", ")} — ${h.turn.reason}`
-          : h.turn.kind === "edit"
-            ? `INTERVIEWER (edit): ${h.turn.text}`
+          : h.turn.kind === "edit" || h.turn.kind === "sketch"
+            ? `INTERVIEWER (${h.turn.kind}): ${h.turn.text}`
             : `INTERVIEWER (done): ${h.turn.summary}`
     )
     .join("\n\n")

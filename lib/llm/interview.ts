@@ -90,7 +90,32 @@ export const editSchema = z.object({
   ops: z.array(editOpSchema).min(1).max(6),
 })
 
-export const turnSchema = z.union([questionSchema, editSchema, doneSchema])
+// The drawing contains a picture of a diagram: redraw it as editable shapes
+// (the client runs Sketch-from-reference and asks the author to accept).
+export const sketchTurnSchema = z.object({
+  kind: z.literal("sketch"),
+  text: z
+    .string()
+    .min(1)
+    .describe("One sentence for the author: what you are redrawing and why."),
+  instruction: z
+    .string()
+    .describe(
+      "What the redraw should reproduce from the picture, or leave out — passed to the sketching model."
+    ),
+  mode: z
+    .enum(["add", "replace"])
+    .describe(
+      "replace: the existing shapes are earlier attempts at the same diagram and should go; add: keep them and draw below."
+    ),
+})
+
+export const turnSchema = z.union([
+  questionSchema,
+  editSchema,
+  sketchTurnSchema,
+  doneSchema,
+])
 
 /**
  * What the model is asked to produce: one flat object, since providers differ
@@ -100,15 +125,15 @@ export const turnSchema = z.union([questionSchema, editSchema, doneSchema])
  */
 export const flatTurnSchema = z.object({
   kind: z
-    .enum(["question", "edit", "done"])
+    .enum(["question", "edit", "sketch", "done"])
     .describe(
-      "question: ask the author; edit: change the drawing; done: finish."
+      "question: ask the author; edit: change the drawing; sketch: redraw a picture on the canvas as editable shapes; done: finish."
     ),
   text: z
     .string()
     .nullable()
     .describe(
-      "question: the question. edit: what you are changing and why. done: null."
+      "question: the question. edit/sketch: what you are changing and why. done: null."
     ),
   options: z
     .array(z.string())
@@ -130,6 +155,18 @@ export const flatTurnSchema = z.object({
     .array(editOpSchema)
     .nullable()
     .describe("edit only: 1 to 6 ops. Otherwise null."),
+  instruction: z
+    .string()
+    .nullable()
+    .describe(
+      "sketch only: what to reproduce from the picture or leave out. Otherwise null."
+    ),
+  mode: z
+    .enum(["add", "replace"])
+    .nullable()
+    .describe(
+      "sketch only: replace earlier attempts at the same diagram, or add below. Otherwise null."
+    ),
   summary: z
     .string()
     .nullable()
@@ -152,13 +189,21 @@ export function fromFlatTurn(
         }
       : flat.kind === "edit"
         ? { kind: "edit", text: flat.text ?? "", ops: flat.ops ?? [] }
-        : { kind: "done", summary: flat.summary ?? flat.text ?? "" }
+        : flat.kind === "sketch"
+          ? {
+              kind: "sketch",
+              text: flat.text ?? "",
+              instruction: flat.instruction ?? "",
+              mode: flat.mode ?? "add",
+            }
+          : { kind: "done", summary: flat.summary ?? flat.text ?? "" }
   const parsed = turnSchema.safeParse(candidate)
   return parsed.success ? parsed.data : null
 }
 
 export type Question = z.infer<typeof questionSchema>
 export type Edit = z.infer<typeof editSchema>
+export type SketchTurn = z.infer<typeof sketchTurnSchema>
 export type EditOp = z.infer<typeof editOpSchema>
 export type Done = z.infer<typeof doneSchema>
 export type InterviewTurn = z.infer<typeof turnSchema>
@@ -185,7 +230,9 @@ Ask one question per turn. Each question:
 
 Do not ask about things the drawing already makes clear, and do not ask about visual styling unless the drawing implies it matters. Prefer questions whose answer changes what gets built. Treat free-text answers as authoritative, even when they contradict the drawing; if an answer implies the drawing should change, note it and keep going. If the author asks you for suggestions, offer them as the options of one question and then move on — do not keep consulting on the same point.
 
-You may return kind "edit" instead of a question, but only when the author explicitly asks for a change to the drawing ("add a worker", "rename that to X", "remove the arrow") or picks an option you offered such as "Add it to the drawing for me". An answer that merely clarifies what a drawn element means is NOT a request to change the drawing — record the meaning and move on. Never edit to tidy, relabel, or annotate on your own initiative. When an edit replaces something, delete what it replaces in the same edit so nothing is duplicated. Keep edits small, using existing labels and ids. Edits are coarse: you can add, connect, rename, and delete, and place new shapes next to existing ones, but you cannot control exact spacing, sizes, or match a picture — if the author asks you to reproduce a reference image or fix the layout, say that and suggest the Sketch-from-reference tool or dragging things by hand instead of attempting it with edits. The client applies the edit and the author accepts or undoes it; their reply tells you which, and after an accepted edit the reply includes the updated graph with new ids. Then continue interviewing.
+You may return kind "edit" instead of a question, but only when the author explicitly asks for a change to the drawing ("add a worker", "rename that to X", "remove the arrow") or picks an option you offered such as "Add it to the drawing for me". An answer that merely clarifies what a drawn element means is NOT a request to change the drawing — record the meaning and move on. Never edit to tidy, relabel, or annotate on your own initiative. When an edit replaces something, delete what it replaces in the same edit so nothing is duplicated. Keep edits small, using existing labels and ids. Edits are coarse: you can add, connect, rename, and delete, and place new shapes next to existing ones, but you cannot control exact spacing, sizes, or match a picture. The client applies the edit and the author accepts or undoes it; their reply tells you which, and after an accepted edit the reply includes the updated graph with new ids. Then continue interviewing.
+
+When the drawing contains a picture of a diagram (a screenshot, a photo of a whiteboard) and the author wants it as editable shapes — they ask for it, or the canvas is essentially just that picture — return kind "sketch" instead of a question: the client redraws the picture with real layout and the author accepts or undoes it. Put in "instruction" what to reproduce or leave out; use mode "replace" when the existing shapes are earlier attempts at the same diagram, "add" otherwise. Never try to reproduce a picture with edit ops. After an accepted sketch the reply carries the new graph; continue the interview about the sketched diagram.
 
 Keep it short. Before every question, ask yourself: could a competent engineer build this now, putting anything still unknown under "Open questions" for the agent to ask about? If yes, return kind "done" instead. Most drawings need 4 to 6 questions; do not exceed 8 unless the author keeps adding new information. Specifically:
 - Do not ask about stack, auth, hosting, or data storage unless the drawing or an earlier answer points at them. Unstated constraints belong in Open questions, not in the interview.
@@ -305,7 +352,7 @@ function priorContext(prior: {
         ? `Author: ${h.answer}`
         : h.turn.kind === "question"
           ? `You asked: ${h.turn.text}`
-          : h.turn.kind === "edit"
+          : h.turn.kind === "edit" || h.turn.kind === "sketch"
             ? `You edited the drawing: ${h.turn.text}`
             : `You concluded: ${h.turn.summary}`
     )
