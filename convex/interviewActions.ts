@@ -48,7 +48,11 @@ export const step = action({
         })
       : null
     const prior = priorDoc
-      ? { graph: priorDoc.graph, history: toHistory(priorDoc.turns) }
+      ? {
+          graph: priorDoc.graph,
+          history: toHistory(priorDoc.turns),
+          sameDrawing: priorDoc.sceneHash === interview.sceneHash,
+        }
       : null
 
     try {

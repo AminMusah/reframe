@@ -185,7 +185,7 @@ Ask one question per turn. Each question:
 
 Do not ask about things the drawing already makes clear, and do not ask about visual styling unless the drawing implies it matters. Prefer questions whose answer changes what gets built. Treat free-text answers as authoritative, even when they contradict the drawing; if an answer implies the drawing should change, note it and keep going. If the author asks you for suggestions, offer them as the options of one question and then move on — do not keep consulting on the same point.
 
-You may return kind "edit" instead of a question, but only when the author explicitly asks for a change to the drawing ("add a worker", "rename that to X", "remove the arrow") or picks an option you offered such as "Add it to the drawing for me". An answer that merely clarifies what a drawn element means is NOT a request to change the drawing — record the meaning and move on. Never edit to tidy, relabel, or annotate on your own initiative. When an edit replaces something, delete what it replaces in the same edit so nothing is duplicated. Keep edits small, using existing labels and ids. The client applies the edit and the author accepts or undoes it; their reply tells you which, and after an accepted edit the reply includes the updated graph with new ids. Then continue interviewing.
+You may return kind "edit" instead of a question, but only when the author explicitly asks for a change to the drawing ("add a worker", "rename that to X", "remove the arrow") or picks an option you offered such as "Add it to the drawing for me". An answer that merely clarifies what a drawn element means is NOT a request to change the drawing — record the meaning and move on. Never edit to tidy, relabel, or annotate on your own initiative. When an edit replaces something, delete what it replaces in the same edit so nothing is duplicated. Keep edits small, using existing labels and ids. Edits are coarse: you can add, connect, rename, and delete, and place new shapes next to existing ones, but you cannot control exact spacing, sizes, or match a picture — if the author asks you to reproduce a reference image or fix the layout, say that and suggest the Sketch-from-reference tool or dragging things by hand instead of attempting it with edits. The client applies the edit and the author accepts or undoes it; their reply tells you which, and after an accepted edit the reply includes the updated graph with new ids. Then continue interviewing.
 
 Keep it short. Before every question, ask yourself: could a competent engineer build this now, putting anything still unknown under "Open questions" for the agent to ask about? If yes, return kind "done" instead. Most drawings need 4 to 6 questions; do not exceed 8 unless the author keeps adding new information. Specifically:
 - Do not ask about stack, auth, hosting, or data storage unless the drawing or an earlier answer points at them. Unstated constraints belong in Open questions, not in the interview.
@@ -207,7 +207,11 @@ export type InterviewInput = {
   png?: { base64: string; mediaType: string } | null
   history: HistoryEntry[]
   /** A previous interview about an earlier version of this drawing (restart-with-context). */
-  prior?: { graph: string; history: HistoryEntry[] } | null
+  prior?: {
+    graph: string
+    history: HistoryEntry[]
+    sameDrawing?: boolean
+  } | null
   /** Ids that exist in the graph; anything else the model cites is dropped. */
   validIds: Iterable<string>
 }
@@ -293,6 +297,7 @@ export async function interviewTurn(
 function priorContext(prior: {
   graph: string
   history: HistoryEntry[]
+  sameDrawing?: boolean
 }): string {
   const transcript = prior.history
     .map((h) =>
@@ -305,7 +310,10 @@ function priorContext(prior: {
             : `You concluded: ${h.turn.summary}`
     )
     .join("\n")
-  return `An earlier interview covered a previous version of this drawing. Its answers still hold unless the new drawing contradicts them — do not ask them again; focus on what changed or was never covered. Element ids in it refer to the OLD graph.
+  const framing = prior.sameDrawing
+    ? `The author has asked for ANOTHER interview about the SAME drawing. The earlier answers below still hold — do not repeat those questions — but the author wants to go further: ask about what the earlier interview did not cover, dig into things it settled only shallowly, and ask at least three questions before finishing. Do not return "done" as your first turn, and do not propose edits unless asked.`
+    : `An earlier interview covered a previous version of this drawing. Its answers still hold unless the new drawing contradicts them — do not ask them again; focus on what changed or was never covered. Element ids in it refer to the OLD graph.`
+  return `${framing}
 
 Earlier drawing:
 ${prior.graph}

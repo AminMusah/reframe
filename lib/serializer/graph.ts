@@ -2,7 +2,7 @@ import {
   area,
   boxGap,
   coverage,
-  distanceToBox,
+  edgeDistance,
   intersection,
   overlapX,
   overlapY,
@@ -221,8 +221,13 @@ export function buildGraph(elements: readonly ExcalidrawElement[]): {
     let bestDist = snap
     for (const n of nodes) {
       if (n.kind === "scribble") continue
-      const d = distanceToBox(boxOfNode.get(n.id)!, p.x, p.y)
-      if (d < bestDist) {
+      const box = boxOfNode.get(n.id)!
+      const d = edgeDistance(box, p.x, p.y)
+      // Ties (e.g. a point on a shared edge) go to the smaller shape.
+      if (
+        d < bestDist ||
+        (d === bestDist && best && area(box) < area(boxOfNode.get(best)!))
+      ) {
         best = n.id
         bestDist = d
       }
@@ -239,6 +244,15 @@ export function buildGraph(elements: readonly ExcalidrawElement[]): {
 
     let from = resolveEnd(el.startBinding, start)
     let to = resolveEnd(el.endBinding, end)
+    // Proximity must not invent a self-loop: an arrow that lost its target
+    // (e.g. the node was deleted) has both loose ends near the same node.
+    if (from && from === to) {
+      const startBound =
+        !!el.startBinding && shortOf.has(el.startBinding.elementId)
+      const endBound = !!el.endBinding && shortOf.has(el.endBinding.elementId)
+      if (!endBound) to = null
+      else if (!startBound) from = null
+    }
     let looseStart = from ? null : pointToGrid(start.x, start.y, sceneBox)
     let looseEnd = to ? null : pointToGrid(end.x, end.y, sceneBox)
 
@@ -284,6 +298,7 @@ export function buildGraph(elements: readonly ExcalidrawElement[]): {
   const boxes: Record<string, Box> = {}
   for (const f of frames) boxes[f.id] = frameBoxes.get(f.sourceId)!
   for (const [id, box] of boxOfNode) boxes[id] = box
+  for (const a of arrows) boxes[a.id] = boxOf(byId.get(a.sourceId)!)
 
   return { graph: { frames, nodes, arrows, groups }, idMap, boxes }
 }

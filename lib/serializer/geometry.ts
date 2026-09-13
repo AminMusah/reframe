@@ -49,6 +49,15 @@ export function distanceToBox(b: Box, px: number, py: number): number {
   return Math.hypot(dx, dy)
 }
 
+/**
+ * Distance from a point to the nearest edge of a box — also for points inside
+ * it, so a small shape a few pixels away beats the container the point sits in.
+ */
+export function edgeDistance(b: Box, px: number, py: number): number {
+  if (!containsPoint(b, px, py)) return distanceToBox(b, px, py)
+  return Math.min(px - b.x, b.x + b.w - px, py - b.y, b.y + b.h - py)
+}
+
 /** Shortest gap between two boxes; 0 when they overlap. */
 export function boxGap(a: Box, b: Box): number {
   const dx = Math.max(a.x - (b.x + b.w), b.x - (a.x + a.w), 0)

@@ -114,6 +114,12 @@ export function applyEdit(input: ApplyInput): ApplyResult {
           skipped.push(`connect ${op.from} → ${op.to}: element not found`)
           break
         }
+        if (isLinear(byId.get(from.id)) || isLinear(byId.get(to.id))) {
+          skipped.push(
+            `connect ${op.from} → ${op.to}: arrows can only join shapes`
+          )
+          break
+        }
         const [start, end, startPoint, endPoint] = anchors(from.box, to.box)
         const id = randomId()
         const created = create({
@@ -174,6 +180,18 @@ export function applyEdit(input: ApplyInput): ApplyResult {
           >
           t.text = op.label
           t.originalText = op.label
+          break
+        }
+        if (isLinear(old)) {
+          const label = boundText(old.id) as
+            Mutable<Extract<ExcalidrawElement, { type: "text" }>> | undefined
+          if (!label) {
+            skipped.push(`rename ${op.id}: this arrow has no label to change`)
+            break
+          }
+          touch(label)
+          label.text = op.label
+          label.originalText = op.label
           break
         }
         if (
@@ -240,6 +258,11 @@ export function applyEdit(input: ApplyInput): ApplyResult {
         if (label) touch(label).isDeleted = true
         for (const el of byId.values()) {
           if (el.isDeleted) continue
+          if (el.boundElements?.some((b) => b.id === old.id)) {
+            touch(el).boundElements = el.boundElements!.filter(
+              (b) => b.id !== old.id
+            )
+          }
           if ((el.type === "arrow" || el.type === "line") && !el.isDeleted) {
             const arrow = el as Mutable<
               Extract<ExcalidrawElement, { type: "arrow" }>
@@ -336,6 +359,10 @@ function anchors(
     [0.5, down ? 1 : 0],
     [0.5, down ? 0 : 1],
   ]
+}
+
+function isLinear(el: ExcalidrawElement | undefined): boolean {
+  return el?.type === "arrow" || el?.type === "line"
 }
 
 function randomId(): string {

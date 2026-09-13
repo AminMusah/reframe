@@ -231,6 +231,36 @@ describe("determinism", () => {
     expect(node(scene, "Postgres").kind).toBe("text")
   })
 
+  it("does not turn an orphaned arrow into a self-loop", () => {
+    // Delete Postgres: the SQL arrow keeps its geometry but loses its target, and
+    // both ends are now nearest to the API box.
+    const orphaned = elements.map((e) =>
+      e.type === "ellipse"
+        ? { ...e, isDeleted: true }
+        : e.type === "arrow" && e.endBinding?.elementId === "ellipse-5"
+          ? {
+              ...e,
+              endBinding: null,
+              points: [
+                [0, 0],
+                [30, 0],
+              ],
+            }
+          : e
+    ) as ExcalidrawElement[]
+    const scene = serializeScene(orphaned)
+    const sql = scene.graph.arrows.find((a) => a.label === "SQL")
+    expect(sql).toBeDefined()
+    expect(sql!.from).not.toBe(sql!.to)
+    expect(sql!.to === null || sql!.from === null).toBe(true)
+  })
+
+  it("exposes pixel boxes for nodes, frames, and arrows", () => {
+    const scene = serializeScene(elements)
+    for (const a of scene.graph.arrows) expect(scene.boxes[a.id]).toBeDefined()
+    for (const n of scene.graph.nodes) expect(scene.boxes[n.id]).toBeDefined()
+  })
+
   it("hashes to a stable sha-256 hex", async () => {
     const a = await hashScene(baseline)
     const b = await hashScene(baseline)
