@@ -39,7 +39,9 @@ import { authClient } from "@/lib/auth-client"
 import { useApiKey } from "@/lib/llm-settings"
 import { clearMirror } from "@/lib/scene-store"
 
-const icon = (i: typeof Key01Icon) => <HugeiconsIcon icon={i} strokeWidth={2} size={16} />
+const icon = (i: typeof Key01Icon) => (
+  <HugeiconsIcon icon={i} strokeWidth={2} size={16} />
+)
 
 /**
  * Everything that used to live in the app header, folded into Excalidraw's
