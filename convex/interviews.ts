@@ -172,36 +172,41 @@ export const rebase = mutation({
     sceneHash: v.string(),
     graph: v.string(),
     pngFileId: v.optional(v.id("_storage")),
+    turnIndex: v.optional(v.number()),
   },
-  handler: async (ctx, { id, sceneHash, graph, pngFileId }) => {
+  handler: async (ctx, { id, sceneHash, graph, pngFileId, turnIndex }) => {
     const interview = await ownedInterview(ctx, id)
     await ctx.db.patch(id, {
       sceneHash,
       graph,
       ...(pngFileId ? { pngFileId } : {}),
-      turns: markLastEdit(interview.turns, true),
+      turns: markChange(interview.turns, true, turnIndex),
     })
   },
 })
 
 /** The author undid the edit; record it so the transcript shows the decision. */
 export const rejectEdit = mutation({
-  args: { id: v.id("interviews") },
-  handler: async (ctx, { id }) => {
+  args: { id: v.id("interviews"), turnIndex: v.optional(v.number()) },
+  handler: async (ctx, { id, turnIndex }) => {
     const interview = await ownedInterview(ctx, id)
-    await ctx.db.patch(id, { turns: markLastEdit(interview.turns, false) })
+    await ctx.db.patch(id, {
+      turns: markChange(interview.turns, false, turnIndex),
+    })
   },
 })
 
-function markLastEdit(turns: Doc<"interviews">["turns"], applied: boolean) {
-  const last = turns[turns.length - 1]
-  if (
-    !last ||
-    last.role !== "assistant" ||
-    (last.kind !== "edit" && last.kind !== "sketch")
-  )
-    return turns
-  return [...turns.slice(0, -1), { ...last, applied }]
+/** Record the author's decision on the change carried by a turn (default: the last one). */
+function markChange(
+  turns: Doc<"interviews">["turns"],
+  applied: boolean,
+  turnIndex?: number
+) {
+  const i = turnIndex ?? turns.length - 1
+  const t = turns[i]
+  if (!t || t.role !== "assistant" || t.kind === "done") return turns
+  if (t.kind === "question" && !(t.ops && t.ops.length)) return turns
+  return [...turns.slice(0, i), { ...t, applied }, ...turns.slice(i + 1)]
 }
 
 export const setError = internalMutation({

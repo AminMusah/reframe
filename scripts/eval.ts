@@ -239,6 +239,10 @@ async function main() {
         continue
       }
       questions++
+      if (turn.ops.length) {
+        edits++
+        say(`  CHANGE: ${turn.change} (${turn.ops.length} ops)`)
+      }
       say(`  Q${questions}: ${turn.text}`)
       say(`      cites ${JSON.stringify(turn.elementIds)} — ${turn.reason}`)
 
@@ -415,7 +419,7 @@ async function judge(
       h.role === "user"
         ? `AUTHOR: ${h.answer}`
         : h.turn.kind === "question"
-          ? `INTERVIEWER: ${h.turn.text}\n  options: ${h.turn.options.join(" | ")}\n  cites: ${h.turn.elementIds.join(", ")} — ${h.turn.reason}`
+          ? `INTERVIEWER: ${h.turn.text}\n  options: ${h.turn.options.join(" | ")}\n  cites: ${h.turn.elementIds.join(", ")} — ${h.turn.reason}${h.turn.change ? `\n  changed the drawing: ${h.turn.change}` : ""}`
           : h.turn.kind === "edit" || h.turn.kind === "sketch"
             ? `INTERVIEWER (${h.turn.kind}): ${h.turn.text}`
             : `INTERVIEWER (done): ${h.turn.summary}`

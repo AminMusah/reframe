@@ -244,16 +244,15 @@ export function applyEdit(input: ApplyInput): ApplyResult {
             const arrow = el as Mutable<
               Extract<ExcalidrawElement, { type: "arrow" }>
             >
-            let hit = false
-            if (arrow.startBinding?.elementId === old.id) {
-              arrow.startBinding = null
-              hit = true
+            // An arrow that loses an end is junk in a diagram: it goes too, label and all.
+            if (
+              arrow.startBinding?.elementId === old.id ||
+              arrow.endBinding?.elementId === old.id
+            ) {
+              touch(arrow).isDeleted = true
+              const arrowLabel = boundText(arrow.id)
+              if (arrowLabel) touch(arrowLabel).isDeleted = true
             }
-            if (arrow.endBinding?.elementId === old.id) {
-              arrow.endBinding = null
-              hit = true
-            }
-            if (hit) touch(arrow)
           }
           if (el.frameId === old.id) touch(el).frameId = null
         }

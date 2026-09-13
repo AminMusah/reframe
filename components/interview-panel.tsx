@@ -12,7 +12,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/convex/_generated/api"
 import type { Doc, Id } from "@/convex/_generated/dataModel"
-import { applyEdit, describeOp } from "@/lib/edits/apply"
+import { applyEdit } from "@/lib/edits/apply"
 import { applySketch, placeSketch } from "@/lib/edits/sketch-apply"
 import { useApiKey, useModel } from "@/lib/llm-settings"
 import {
@@ -53,88 +53,100 @@ export function InterviewPanel({
 
   const currentQuestion = interview ? lastQuestion(interview.turns) : null
   const lastTurn = interview?.turns[interview.turns.length - 1]
-  // A change the model proposed and the author has not decided on yet: an
-  // edit (ops) or a sketch (redraw a picture on the canvas).
-  const pendingEdit =
+  // A drawing change riding on the latest assistant turn: ops attached to a
+  // question, a standalone edit, or a sketch. Edits are applied on arrival
+  // (Undo stays available); a sketch replaces things, so it waits for Accept.
+  const pendingChange =
     interview?.status === "awaiting_answer" &&
     lastTurn?.role === "assistant" &&
-    (lastTurn.kind === "edit" || lastTurn.kind === "sketch")
+    (lastTurn.kind === "edit" ||
+      lastTurn.kind === "sketch" ||
+      (lastTurn.kind === "question" && (lastTurn.ops?.length ?? 0) > 0))
       ? lastTurn
       : null
-  const editKey = pendingEdit ? interview!.turns.length : null
-  // While an edit is pending the canvas legitimately differs from the pinned hash.
+  const changeKey = pendingChange ? interview!.turns.length : null
+  const sketchPending = pendingChange?.kind === "sketch" ? pendingChange : null
+  // While a change is in flight the canvas legitimately differs from the pinned hash.
   const drawingChanged =
     !!interview &&
     !!sceneHash &&
     interview.sceneHash !== sceneHash &&
-    !pendingEdit
+    !pendingChange
 
-  // Agent edits: applied to the canvas as soon as they arrive, then Accept / Undo.
-  // `decided` stays set until the next turn arrives, so the apply effect
-  // cannot fire a second time while the answer is in flight.
-  const [editState, setEditState] = React.useState<{
+  const [changeState, setChangeState] = React.useState<{
     key: number
+    kind: "edit" | "sketch"
+    text: string
     snapshot: readonly ExcalidrawElement[]
     skipped: string[]
-    decided: boolean
-    /** Sketches take a model call; the card shows progress and failures. */
-    working?: boolean
+    status: "working" | "applied" | "undone" | "failed" | "decided"
     failed?: string
+    /** Told to the model with the next answer, so its ids stay right. */
+    note?: string
   } | null>(null)
+
+  /** Pin the interview to whatever is on the canvas now: hash, graph, PNG. */
+  const rebaseToCanvas = async (
+    excalidraw: ExcalidrawImperativeAPI,
+    turnIndex: number
+  ) => {
+    const elements = excalidraw.getSceneElements()
+    const serialized = serializeScene(elements)
+    const newHash = await hashScene(serialized.text)
+    const pngFileId = await exportPng(excalidraw, generateUploadUrl)
+    await rebase({
+      id: interview!._id,
+      sceneHash: newHash,
+      graph: serialized.text,
+      pngFileId,
+      turnIndex,
+    })
+    return serialized.text
+  }
 
   const applyPending = async () => {
     const excalidraw = excalidrawApi.current
-    if (!excalidraw || !pendingEdit || editKey === null) return
+    if (!excalidraw || !pendingChange || changeKey === null || !interview)
+      return
     const { convertToExcalidrawElements, CaptureUpdateAction } =
       await import("@excalidraw/excalidraw")
     const elements = excalidraw.getSceneElements()
+    const turnIndex = changeKey - 1
+    const kind = pendingChange.kind === "sketch" ? "sketch" : "edit"
+    const text =
+      pendingChange.kind === "question"
+        ? (pendingChange.change ?? "Updated the drawing")
+        : pendingChange.text
+    const base = { key: changeKey, kind, text, snapshot: elements } as const
 
     let next: readonly ExcalidrawElement[]
     let changedIds: string[]
     let skipped: string[] = []
-    if (pendingEdit.kind === "edit") {
-      const serialized = serializeScene(elements)
-      const result = applyEdit({
-        elements,
-        ops: pendingEdit.ops,
-        idMap: serialized.idMap,
-        boxes: serialized.boxes,
-        convert: convertToExcalidrawElements,
-      })
-      next = result.elements
-      changedIds = result.changedIds
-      skipped = result.skipped
-    } else {
-      // Sketch: photograph the canvas, ask the vision model for shapes on a grid,
-      // build them. The PNG upload is transient; the action deletes it.
-      setEditState({
-        key: editKey,
-        snapshot: elements,
-        skipped: [],
-        decided: false,
-        working: true,
-      })
+    if (pendingChange.kind === "sketch") {
+      // Photograph the canvas, ask the vision model for shapes on a grid, build
+      // them. The PNG upload is transient; the action deletes it.
+      setChangeState({ ...base, skipped: [], status: "working" })
       try {
         const pngFileId = await exportPng(excalidraw, generateUploadUrl)
         if (!pngFileId) throw new Error("Nothing on the canvas to read")
         const result = await sketchFromReference({
           pngFileId,
           apiKey: apiKey!,
-          model: interview!.model,
-          instruction: pendingEdit.instruction || undefined,
+          model: interview.model,
+          instruction: pendingChange.instruction || undefined,
         })
         if ("error" in result) throw new Error(result.message)
         if (result.sketch.nodes.length === 0) {
           throw new Error("No diagram was found in the picture")
         }
-        const placement = placeSketch(elements, pendingEdit.mode)
+        const placement = placeSketch(elements, pendingChange.mode)
         const built = applySketch(
           result.sketch,
           placement,
           convertToExcalidrawElements
         )
         const kept =
-          pendingEdit.mode === "replace"
+          pendingChange.mode === "replace"
             ? elements.map((el) =>
                 el.type === "image" ||
                 el.type === "frame" ||
@@ -146,15 +158,30 @@ export function InterviewPanel({
         next = [...kept, ...built.elements]
         changedIds = built.ids
       } catch (err) {
-        setEditState({
-          key: editKey,
-          snapshot: elements,
+        setChangeState({
+          ...base,
           skipped: [],
-          decided: false,
+          status: "failed",
           failed: err instanceof Error ? err.message : String(err),
         })
         return
       }
+    } else {
+      const ops =
+        pendingChange.kind === "edit"
+          ? pendingChange.ops
+          : (pendingChange.ops ?? [])
+      const serialized = serializeScene(elements)
+      const result = applyEdit({
+        elements,
+        ops,
+        idMap: serialized.idMap,
+        boxes: serialized.boxes,
+        convert: convertToExcalidrawElements,
+      })
+      next = result.elements
+      changedIds = result.changedIds
+      skipped = result.skipped
     }
 
     excalidraw.updateScene({
@@ -176,12 +203,22 @@ export function InterviewPanel({
         animation: true,
       })
     }
-    setEditState({
-      key: editKey,
-      snapshot: elements,
-      skipped,
-      decided: false,
-    })
+
+    if (kind === "sketch") {
+      // Big and destructive: the author confirms before the interview moves on.
+      setChangeState({ ...base, skipped, status: "applied" })
+      return
+    }
+    // Edits are in force at once: pin the interview to the new drawing.
+    setChangeState({ ...base, skipped, status: "working" })
+    const graph = await rebaseToCanvas(excalidraw, turnIndex)
+    const note = `(Your drawing change was applied. The drawing is now:\n\n${graph})`
+    setChangeState({ ...base, skipped, status: "applied", note })
+    if (pendingChange.kind === "edit" && apiKey) {
+      // A standalone edit has no question to answer; hand the model the new
+      // graph so it continues. The Undo link stays until the next answer.
+      await step({ interviewId: interview._id, apiKey, answer: note })
+    }
   }
   // The trigger is a query update (an external system); apply runs on the next
   // tick through a ref so the effect itself stays free of state changes.
@@ -189,56 +226,64 @@ export function InterviewPanel({
   React.useEffect(() => {
     applyRef.current = applyPending
   })
-  const appliedKey = editState?.key ?? null
+  const appliedKey = changeState?.key ?? null
   React.useEffect(() => {
-    if (editKey !== null && appliedKey !== editKey) {
+    if (changeKey !== null && appliedKey !== changeKey) {
       const t = setTimeout(() => void applyRef.current(), 0)
       return () => clearTimeout(t)
     }
-  }, [editKey, appliedKey])
+  }, [changeKey, appliedKey])
 
-  const acceptEdit = async () => {
+  /** Undo an applied edit: restore the snapshot and pin the interview back to it. */
+  const undoChange = async () => {
     const excalidraw = excalidrawApi.current
-    if (!excalidraw || !interview || !apiKey) return
+    if (!excalidraw || !interview || !changeState) return
     setBusy(true)
     try {
-      const elements = excalidraw.getSceneElements()
-      const serialized = serializeScene(elements)
-      const newHash = await hashScene(serialized.text)
-      const pngFileId = await exportPng(excalidraw, generateUploadUrl)
-      await rebase({
-        id: interview._id,
-        sceneHash: newHash,
-        graph: serialized.text,
-        pngFileId,
+      const { CaptureUpdateAction } = await import("@excalidraw/excalidraw")
+      excalidraw.updateScene({
+        elements: changeState.snapshot,
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       })
-      setEditState((st) => (st ? { ...st, decided: true } : st))
+      const turnIndex = changeState.key - 1
+      const graph = await rebaseToCanvas(excalidraw, turnIndex)
+      await rejectEdit({ id: interview._id, turnIndex })
+      const note = `(You undid the last drawing change; the drawing is unchanged:\n\n${graph})`
+      setChangeState({ ...changeState, status: "undone", note })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const acceptSketch = async () => {
+    const excalidraw = excalidrawApi.current
+    if (!excalidraw || !interview || !apiKey || !changeState) return
+    setBusy(true)
+    try {
+      const graph = await rebaseToCanvas(excalidraw, changeState.key - 1)
+      setChangeState({ ...changeState, status: "decided" })
       await step({
         interviewId: interview._id,
         apiKey,
-        answer: `Applied. The drawing is now:
-
-${serialized.text}`,
+        answer: `Applied. The drawing is now:\n\n${graph}`,
       })
     } finally {
       setBusy(false)
     }
   }
 
-  const undoEdit = async () => {
+  const undoSketch = async () => {
     const excalidraw = excalidrawApi.current
-    if (!excalidraw || !interview || !apiKey) return
+    if (!excalidraw || !interview || !apiKey || !changeState) return
     setBusy(true)
     try {
-      if (editState) {
-        const { CaptureUpdateAction } = await import("@excalidraw/excalidraw")
-        excalidraw.updateScene({
-          elements: editState.snapshot,
-          captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-        })
-      }
-      await rejectEdit({ id: interview._id })
-      setEditState((st) => (st ? { ...st, decided: true } : st))
+      const { CaptureUpdateAction } = await import("@excalidraw/excalidraw")
+      excalidraw.updateScene({
+        elements: changeState.snapshot,
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      })
+      await rejectEdit({ id: interview._id, turnIndex: changeState.key - 1 })
+      setChangeState({ ...changeState, status: "decided" })
       await step({
         interviewId: interview._id,
         apiKey,
@@ -292,7 +337,19 @@ ${serialized.text}`,
     if (!interview || !apiKey) return
     setBusy(true)
     try {
-      await step({ interviewId: interview._id, apiKey, answer: text })
+      // An applied or undone change travels with the answer so the model's ids match.
+      const note =
+        changeState?.kind === "edit" &&
+        (changeState.status === "applied" || changeState.status === "undone")
+          ? changeState.note
+          : undefined
+      if (changeState && note)
+        setChangeState({ ...changeState, status: "decided" })
+      await step({
+        interviewId: interview._id,
+        apiKey,
+        answer: note ? `${note}\n\nAnswer: ${text}` : text,
+      })
     } finally {
       setBusy(false)
     }
@@ -356,41 +413,32 @@ ${serialized.text}`,
           </p>
         )}
 
-        {pendingEdit && (
+        {sketchPending && (
           <div className="space-y-3 rounded-md border p-3 text-sm">
-            <p className="font-medium">✎ {pendingEdit.text}</p>
-            {pendingEdit.kind === "edit" ? (
-              <ul className="list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
-                {pendingEdit.ops.map((op, i) => (
-                  <li key={i}>{describeOp(op)}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                {pendingEdit.mode === "replace"
-                  ? "Redrawing the picture as editable shapes and clearing the earlier attempt."
-                  : "Redrawing the picture as editable shapes below the drawing."}
-              </p>
+            <p className="font-medium">✎ {sketchPending.text}</p>
+            <p className="text-xs text-muted-foreground">
+              {sketchPending.mode === "replace"
+                ? "Redrawing the picture as editable shapes and clearing the earlier attempt."
+                : "Redrawing the picture as editable shapes below the drawing."}
+            </p>
+            {changeState?.key === changeKey &&
+              changeState.status === "working" && (
+                <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Spinner /> Reading the picture…
+                </p>
+              )}
+            {changeState?.key === changeKey && changeState.failed && (
+              <p className="text-xs text-destructive">{changeState.failed}</p>
             )}
-            {editState?.key === editKey && editState.working && (
-              <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Spinner /> Reading the picture…
-              </p>
-            )}
-            {editState?.key === editKey && editState.failed && (
-              <p className="text-xs text-destructive">{editState.failed}</p>
-            )}
-            {editState?.skipped.length ? (
-              <p className="text-xs text-destructive">
-                Skipped: {editState.skipped.join("; ")}
-              </p>
-            ) : null}
             <div className="flex gap-2">
-              {editState?.key === editKey && editState.decided ? (
+              {changeState?.key !== changeKey ? (
+                <Button size="sm" onClick={applyPending} disabled={busy}>
+                  Redraw now
+                </Button>
+              ) : changeState.status === "decided" ? (
                 <Spinner />
-              ) : editState?.key === editKey &&
-                editState.working ? null : editState?.key === editKey &&
-                editState.failed ? (
+              ) : changeState.status ===
+                "working" ? null : changeState.status === "failed" ? (
                 <>
                   <Button size="sm" onClick={applyPending} disabled={busy}>
                     Try again
@@ -398,39 +446,45 @@ ${serialized.text}`,
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={undoEdit}
+                    onClick={undoSketch}
                     disabled={busy}
                   >
                     Skip
                   </Button>
                 </>
-              ) : editState?.key === editKey ? (
+              ) : (
                 <>
-                  <Button size="sm" onClick={acceptEdit} disabled={busy}>
+                  <Button size="sm" onClick={acceptSketch} disabled={busy}>
                     Accept
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={undoEdit}
+                    onClick={undoSketch}
                     disabled={busy}
                   >
                     Undo
                   </Button>
                 </>
-              ) : (
-                <Button size="sm" onClick={applyPending} disabled={busy}>
-                  Apply to drawing
-                </Button>
               )}
             </div>
           </div>
         )}
 
-        {interview?.status === "awaiting_answer" && !pendingEdit && (
+        {interview?.status === "awaiting_answer" && !sketchPending && (
           <QuestionCard
             key={interview.turns.length}
             question={currentQuestion}
+            change={
+              changeState?.kind === "edit" && changeState.status !== "decided"
+                ? {
+                    text: changeState.text,
+                    status: changeState.status,
+                    skipped: changeState.skipped,
+                    onUndo: undoChange,
+                  }
+                : null
+            }
             disabled={busy}
             onAnswer={answer}
             onEnough={() => finish({ id: interview._id })}
@@ -509,7 +563,15 @@ function Transcript({ turns }: { turns: Turn[] }) {
           {t.role === "user" ? (
             <p className="rounded-md bg-accent px-3 py-2">{t.answer}</p>
           ) : t.kind === "question" ? (
-            <p className="text-muted-foreground">{t.text}</p>
+            <div className="space-y-1">
+              {t.change && (
+                <p className="text-xs text-muted-foreground">
+                  ✎ {t.change}
+                  {t.applied === false && " (undone)"}
+                </p>
+              )}
+              <p className="text-muted-foreground">{t.text}</p>
+            </div>
           ) : t.kind === "edit" || t.kind === "sketch" ? (
             <p className="text-muted-foreground">
               ✎ {t.text}
@@ -526,11 +588,19 @@ function Transcript({ turns }: { turns: Turn[] }) {
 
 function QuestionCard({
   question,
+  change,
   disabled,
   onAnswer,
   onEnough,
 }: {
   question: Extract<Turn, { kind: "question" }> | null
+  /** A drawing change that came with this question, already applied. */
+  change: {
+    text: string
+    status: "working" | "applied" | "undone" | "failed"
+    skipped: string[]
+    onUndo: () => void
+  } | null
   disabled: boolean
   onAnswer: (text: string) => void
   onEnough: () => void
@@ -540,6 +610,33 @@ function QuestionCard({
   if (!question) return null
   return (
     <div className="space-y-3">
+      {change && (
+        <div className="rounded-md border border-dashed px-3 py-2 text-xs">
+          <span className="text-muted-foreground">✎ {change.text}</span>
+          {change.status === "working" && <Spinner className="ml-2 inline" />}
+          {change.status === "applied" && (
+            <button
+              type="button"
+              onClick={change.onUndo}
+              disabled={disabled}
+              className="ml-2 underline-offset-2 hover:underline"
+            >
+              Undo
+            </button>
+          )}
+          {change.status === "undone" && (
+            <span className="ml-2 text-muted-foreground">(undone)</span>
+          )}
+          {change.status === "failed" && (
+            <span className="ml-2 text-destructive">could not be applied</span>
+          )}
+          {change.skipped.length > 0 && (
+            <p className="mt-1 text-destructive">
+              Skipped: {change.skipped.join("; ")}
+            </p>
+          )}
+        </div>
+      )}
       <p className="text-sm font-medium" title={question.reason}>
         {question.text}
       </p>

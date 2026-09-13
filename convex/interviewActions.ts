@@ -65,9 +65,18 @@ export const step = action({
         history: toHistory(interview.turns),
         validIds: graphIds(interview.graph),
       })
+      // Convex validators have no null: a question's absent change is omitted.
+      const stored =
+        turn.kind === "question"
+          ? {
+              role: "assistant" as const,
+              ...turn,
+              change: turn.change ?? undefined,
+            }
+          : { role: "assistant" as const, ...turn }
       await ctx.runMutation(internal.interviews.appendAssistantTurn, {
         id: interviewId,
-        turn: { role: "assistant", ...turn },
+        turn: stored,
       })
       return turn
     } catch (err) {

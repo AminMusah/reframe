@@ -147,7 +147,13 @@ Scenes and PNGs go in file storage (docs are capped at 1 MB). Turns live as an a
 | 13  | OpenAI provider (Gemini later)                                                                    | ✅      |
 | 14  | Public share links                                                                                | later  |
 
-### Agent edits (v1.1) — built
+### Agent edits (v1.1) — built; auto-applied since 2026-09-13
+
+**The drawing is the living spec.** Whenever an answer changes what the drawing states (a label, a connection, whether a component exists, where a flow goes), the interviewer attaches `ops` + a one-line `change` note to its **next question**. The client applies them the moment the question arrives, pins the interview to the new drawing (hash, graph, PNG — `interviews.rebase` with the turn index), and shows "✎ change · Undo" above the question. Undo restores the snapshot and pins back; either way the outcome travels with the next answer ("(Your drawing change was applied. The drawing is now: …)") so the model's ids stay right. Standalone `edit` turns (explicit asks with nothing to ask back) apply the same way and the client answers for the author automatically. Only **sketches** keep Accept / Undo, because they replace things. This replaced the "edits only on explicit request" rule from eval round 4: that rule cut Terra's tidy-up noise but also stopped the legitimate case — the author saying "Firebase only does storage" and the drawing still claiming auth. The prompt now draws the line at "changes a stated fact" vs "adds detail the drawing never claimed"; tidying and annotations remain off-limits.
+
+Deleting a node deletes the arrows bound to it (and their labels); a one-ended arrow is junk in a diagram.
+
+
 
 - Turn kind `edit` = `{ text, ops }`, 1–6 ops: `add { ref, type: rectangle|ellipse|diamond|text, label, place: { relative: right|left|above|below|inside, of } }`, `connect { from, to, label, bidirectional }`, `update { id, label }`, `delete { id }`. Ids are graph ids or refs added earlier in the same edit; the module drops ops with unknown ids and rejects an edit with none left.
 - `lib/edits/apply.ts` (client, pure over `(elements, ops, idMap, boxes, convert)`): new shapes via `convertToExcalidrawElements` with ids we pick; placement is next to the anchor, stepping outward until it overlaps nothing of similar size; arrows are bound by hand (`startBinding`/`endBinding` + `boundElements`) because the converter only binds within one call; `update` rebuilds the shape under the same id so bindings survive; `delete` also unbinds arrows and detaches frame children. The serializer exposes `boxes` (pixel boxes by short id) for this.

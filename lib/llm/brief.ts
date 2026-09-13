@@ -59,7 +59,10 @@ export async function generateBrief(input: BriefInput): Promise<string> {
     .map((entry) => {
       if (entry.role === "user") return `Author: ${entry.answer}`
       if (entry.turn.kind === "question") {
-        return `Interviewer: ${entry.turn.text}\n  (options offered: ${entry.turn.options.join(" | ")})`
+        const change = entry.turn.change
+          ? `\n  (changed the drawing: ${entry.turn.change})`
+          : ""
+        return `Interviewer: ${entry.turn.text}\n  (options offered: ${entry.turn.options.join(" | ")})${change}`
       }
       if (entry.turn.kind === "edit" || entry.turn.kind === "sketch") {
         return `Interviewer (edited the drawing): ${entry.turn.text}`

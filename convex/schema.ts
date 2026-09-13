@@ -1,14 +1,7 @@
 import { defineSchema, defineTable } from "convex/server"
 import { v } from "convex/values"
 
-export const questionTurn = v.object({
-  role: v.literal("assistant"),
-  kind: v.literal("question"),
-  text: v.string(),
-  options: v.array(v.string()),
-  reason: v.string(),
-  elementIds: v.array(v.string()),
-})
+// questionTurn is defined after editOp so a question can carry ops.
 
 export const doneTurn = v.object({
   role: v.literal("assistant"),
@@ -49,6 +42,19 @@ export const editOp = v.union(
   v.object({ op: v.literal("update"), id: idRef, label: v.string() }),
   v.object({ op: v.literal("delete"), id: idRef })
 )
+
+export const questionTurn = v.object({
+  role: v.literal("assistant"),
+  kind: v.literal("question"),
+  text: v.string(),
+  options: v.array(v.string()),
+  reason: v.string(),
+  elementIds: v.array(v.string()),
+  // A drawing change the previous answer called for, applied on arrival.
+  ops: v.optional(v.array(editOp)),
+  change: v.optional(v.string()),
+  applied: v.optional(v.boolean()),
+})
 
 export const editTurn = v.object({
   role: v.literal("assistant"),
