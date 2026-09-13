@@ -92,6 +92,18 @@ Copy button. Targets (Generic / Claude Code / Cursor) differ only in a framing n
 - Canvas stays interactive during the interview.
 - Header: Projects sheet (list / create / rename), model dropdown, key dialog.
 
+### Design pass (v1.2)
+
+The canvas is the hero; the panel is one calm conversation. Rules that came out of the pass:
+
+- **One thing at a time.** Answered pairs collapse behind an "N answered · Show" toggle (also once the interview is done, so the brief leads). The current question is the only large text in the panel, numbered ("Question 3") so the author feels progress without a cap.
+- **Options are a numbered list** answerable with keys 1–5 (ignored while typing in any field). "Something else…" is a link that opens the textarea on demand; the Enough link stays visible in both modes.
+- **Drawing changes are a quiet pill** above the question (pencil icon, one line, Undo), not a card. The sketch card keeps its Keep it / Undo pair because it is destructive.
+- **Empty state** explains Draw → Answer → Paste; the key form is the panel's first screen when no key is set.
+- **Brief is rendered Markdown** (`react-markdown`, plain element styles in `globals.css`, no typography plugin) inside a card with a segmented Generic / Claude Code / Cursor switch, a word count, Regenerate and a Copy → ✓ Copied button. Copy still copies the raw Markdown.
+- **Header**: wordmark + project name as a breadcrumb; save state is a coloured dot that fades in only when there is something to say.
+- **Motion** (`globals.css`): every `[data-slot=button]` and `.pressable` scales to 0.97 on press over 160 ms with a strong ease-out; new cards use `.enter` (`@starting-style`, 6 px rise, 200 ms) and option lists `.enter-stagger` (40 ms steps); the streaming caret is a blinking bar. Transform/opacity only, nothing over 300 ms, keyboard answers do not animate, and `prefers-reduced-motion` disables all of it.
+
 ## Scene change handling
 
 `sceneHash` = SHA-256 of the **serializer output**, so cosmetic nudges within the same coarse grid cell or style changes do not count as a change; anything that alters what the model would read does. Each interview pins `sceneHash` at its first turn. If the scene hash changes mid-interview or after a brief exists, show a banner: **Drawing changed — restart with new drawing / keep going**. The interview is always a pure function of one snapshot. An accepted agent edit (v1.1) becomes the new baseline without a restart.

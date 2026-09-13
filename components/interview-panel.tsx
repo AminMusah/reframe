@@ -5,11 +5,21 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types"
 import { useAction, useMutation, useQuery } from "convex/react"
 import * as React from "react"
 
+import {
+  ArrowTurnBackwardIcon,
+  Image02Icon,
+  PencilEdit02Icon,
+  Sent02Icon,
+  SparklesIcon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+
 import { BriefView } from "@/components/brief-view"
 import { KeyForm } from "@/components/key-form"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
+import { cn } from "cn"
 import { api } from "@/convex/_generated/api"
 import type { Doc, Id } from "@/convex/_generated/dataModel"
 import { applyEdit } from "@/lib/edits/apply"
@@ -367,11 +377,13 @@ export function InterviewPanel({
 
   if (!apiKey || interview?.lastError === "bad_key") {
     return (
-      <div className="p-4">
-        <KeyForm
-          rejected={interview?.lastError === "bad_key"}
-          onSave={setApiKey}
-        />
+      <div className="flex h-full items-center p-6">
+        <div className="enter w-full">
+          <KeyForm
+            rejected={interview?.lastError === "bad_key"}
+            onSave={setApiKey}
+          />
+        </div>
       </div>
     )
   }
@@ -379,20 +391,26 @@ export function InterviewPanel({
   if (interview === undefined) return null
 
   const idle = !interview || interview.status === "done"
+  const doneTurn = interview?.turns.find(
+    (t): t is Extract<Turn, { kind: "done" }> =>
+      t.role === "assistant" && t.kind === "done"
+  )
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
+      <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
         {drawingChanged && ignoredHash !== sceneHash && (
-          <div className="space-y-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
-            <p>Drawing changed since this interview started.</p>
-            <div className="flex gap-2">
+          <Notice tone="warn" className="enter">
+            <p className="font-medium">
+              The drawing changed since this interview started.
+            </p>
+            <div className="mt-2 flex gap-2">
               <Button
                 size="sm"
                 onClick={() => reframe(interview._id)}
                 disabled={busy}
               >
-                Restart with new drawing
+                Restart with the new drawing
               </Button>
               <Button
                 size="sm"
@@ -402,20 +420,18 @@ export function InterviewPanel({
                 Keep going
               </Button>
             </div>
-          </div>
+          </Notice>
         )}
+
+        {!interview && <EmptyState nodeCount={nodeCount} />}
 
         {interview && <Transcript turns={interview.turns} />}
 
-        {interview?.status === "thinking" && (
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Spinner /> Looking at the drawing…
-          </p>
-        )}
+        {interview?.status === "thinking" && <Thinking />}
 
         {sketchPending && (
-          <div className="space-y-3 rounded-md border p-3 text-sm">
-            <p className="font-medium">✎ {sketchPending.text}</p>
+          <Card className="enter space-y-3">
+            <CardTitle icon={Image02Icon}>{sketchPending.text}</CardTitle>
             <p className="text-xs text-muted-foreground">
               {sketchPending.mode === "replace"
                 ? "Redrawing the picture as editable shapes and clearing the earlier attempt."
@@ -455,7 +471,7 @@ export function InterviewPanel({
               ) : (
                 <>
                   <Button size="sm" onClick={acceptSketch} disabled={busy}>
-                    Accept
+                    Keep it
                   </Button>
                   <Button
                     size="sm"
@@ -468,12 +484,13 @@ export function InterviewPanel({
                 </>
               )}
             </div>
-          </div>
+          </Card>
         )}
 
         {interview?.status === "awaiting_answer" && !sketchPending && (
           <QuestionCard
             key={interview.turns.length}
+            number={countQuestions(interview.turns)}
             question={currentQuestion}
             change={
               changeState?.kind === "edit" && changeState.status !== "decided"
@@ -492,42 +509,187 @@ export function InterviewPanel({
         )}
 
         {interview?.status === "error" && (
-          <div className="space-y-2 rounded-md border border-destructive/40 p-3 text-sm">
+          <Notice tone="error" className="enter">
             <p>{ERROR_TEXT[interview.lastError ?? "network"]}</p>
-            <Button size="sm" variant="outline" onClick={retry} disabled={busy}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-2"
+              onClick={retry}
+              disabled={busy}
+            >
               Retry
             </Button>
-          </div>
+          </Notice>
         )}
 
         {interview?.status === "done" && (
-          <BriefView interviewId={interview._id} apiKey={apiKey} />
+          <div className="enter space-y-5">
+            {doneTurn && (
+              <Card className="space-y-1.5">
+                <CardTitle icon={SparklesIcon}>What we established</CardTitle>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {doneTurn.summary}
+                </p>
+              </Card>
+            )}
+            <BriefView interviewId={interview._id} apiKey={apiKey} />
+          </div>
         )}
       </div>
 
       {idle && (
-        <div className="space-y-3 border-t p-4">
+        <div className="space-y-2 border-t px-5 py-4">
           <Button
+            size="lg"
             className="w-full"
             onClick={() => reframe(interview?._id)}
             disabled={busy || nodeCount === 0}
           >
-            {busy ? <Spinner /> : interview ? "Interview again" : "Reframe"}
+            {busy ? (
+              <Spinner />
+            ) : (
+              <>
+                <HugeiconsIcon
+                  icon={SparklesIcon}
+                  strokeWidth={2}
+                  data-icon="inline-start"
+                />
+                {interview ? "Interview again" : "Reframe"}
+              </>
+            )}
           </Button>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-center text-xs text-muted-foreground">
             {nodeCount === 0
-              ? "Draw something, then click Reframe."
+              ? "Draw something first."
               : interview
-                ? "Starts a new interview that already knows your earlier answers."
-                : `${nodeCount} element${nodeCount === 1 ? "" : "s"} will be sent with a PNG of the canvas.`}
+                ? "A new interview that already knows your earlier answers."
+                : `Sends ${nodeCount} element${nodeCount === 1 ? "" : "s"} and a picture of the canvas.`}
           </p>
           {startError && (
-            <p className="text-xs text-destructive">{startError}</p>
+            <p className="text-center text-xs text-destructive">{startError}</p>
           )}
         </div>
       )}
     </div>
   )
+}
+
+/* ---------- surfaces ---------- */
+
+function Card({
+  className,
+  children,
+}: {
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border bg-card p-4 text-sm text-card-foreground shadow-xs",
+        className
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+function CardTitle({
+  icon,
+  children,
+}: {
+  icon: typeof SparklesIcon
+  children: React.ReactNode
+}) {
+  return (
+    <p className="flex items-start gap-2 font-medium">
+      <HugeiconsIcon
+        icon={icon}
+        strokeWidth={2}
+        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+      />
+      <span>{children}</span>
+    </p>
+  )
+}
+
+function Notice({
+  tone,
+  className,
+  children,
+}: {
+  tone: "warn" | "error"
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border p-4 text-sm",
+        tone === "warn" && "border-amber-500/40 bg-amber-500/10",
+        tone === "error" && "border-destructive/40 bg-destructive/5",
+        className
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+function EmptyState({ nodeCount }: { nodeCount: number }) {
+  const steps = [
+    ["Draw", "Boxes, arrows, scribbles, a screenshot — whatever says it."],
+    ["Answer", "A few questions, one at a time, about what you drew."],
+    ["Paste", "A brief your coding agent can build from, in its words."],
+  ] as const
+  return (
+    <div className="enter flex h-full flex-col justify-center gap-6 py-6">
+      <div className="space-y-1">
+        <p className="text-lg font-semibold tracking-tight">
+          {nodeCount === 0 ? "Start on the canvas" : "Ready when you are"}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {nodeCount === 0
+            ? "Reframe turns a drawing into a brief by asking you about it."
+            : `${nodeCount} element${nodeCount === 1 ? "" : "s"} on the canvas. Click Reframe to be interviewed about them.`}
+        </p>
+      </div>
+      <ol className="enter-stagger space-y-3">
+        {steps.map(([title, body], i) => (
+          <li key={title} className="flex gap-3">
+            <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-[10px] text-muted-foreground">
+              {i + 1}
+            </span>
+            <div>
+              <p className="text-sm font-medium">{title}</p>
+              <p className="text-xs text-muted-foreground">{body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}
+
+function Thinking() {
+  return (
+    <div className="enter space-y-2.5 rounded-xl border p-4" aria-live="polite">
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Spinner /> Looking at the drawing…
+      </p>
+      <div className="space-y-2">
+        <div className="h-2.5 w-4/5 animate-pulse rounded bg-muted" />
+        <div className="h-2.5 w-3/5 animate-pulse rounded bg-muted" />
+      </div>
+    </div>
+  )
+}
+
+function countQuestions(turns: Turn[]) {
+  return turns.filter((t) => t.role === "assistant" && t.kind === "question")
+    .length
 }
 
 const ERROR_TEXT: Record<NonNullable<Interview["lastError"]>, string> = {
@@ -549,50 +711,74 @@ function lastQuestion(turns: Turn[]) {
 }
 
 function Transcript({ turns }: { turns: Turn[] }) {
-  // Everything except the question currently being asked.
+  // Everything except the turn currently being acted on.
   const last = turns[turns.length - 1]
   const settled =
     last && last.role === "assistant" && last.kind !== "done"
       ? turns.slice(0, -1)
       : turns
+  const [open, setOpen] = React.useState(false)
+  const answered = settled.filter((t) => t.role === "user").length
   if (settled.length === 0) return null
   return (
-    <ol className="space-y-3 text-sm">
-      {settled.map((t, i) => (
-        <li key={i}>
-          {t.role === "user" ? (
-            <p className="rounded-md bg-accent px-3 py-2">{t.answer}</p>
-          ) : t.kind === "question" ? (
-            <div className="space-y-1">
-              {t.change && (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="pressable flex w-full items-center justify-between rounded-md px-1 py-1 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <span>{answered} answered</span>
+        <span>{open ? "Hide" : "Show"}</span>
+      </button>
+      {open && (
+        <ol className="enter space-y-3 border-l pl-3 text-sm">
+          {settled.map((t, i) => (
+            <li key={i}>
+              {t.role === "user" ? (
+                <p className="text-foreground">{stripNote(t.answer)}</p>
+              ) : t.kind === "question" ? (
+                <div className="space-y-0.5">
+                  {t.change && (
+                    <p className="text-xs text-muted-foreground">
+                      ✎ {t.change}
+                      {t.applied === false && " (undone)"}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">{t.text}</p>
+                </div>
+              ) : t.kind === "edit" || t.kind === "sketch" ? (
                 <p className="text-xs text-muted-foreground">
-                  ✎ {t.change}
+                  ✎ {t.text}
                   {t.applied === false && " (undone)"}
                 </p>
-              )}
-              <p className="text-muted-foreground">{t.text}</p>
-            </div>
-          ) : t.kind === "edit" || t.kind === "sketch" ? (
-            <p className="text-muted-foreground">
-              ✎ {t.text}
-              {t.applied === false && " (undone)"}
-            </p>
-          ) : (
-            <p className="rounded-md border px-3 py-2">{t.summary}</p>
-          )}
-        </li>
-      ))}
-    </ol>
+              ) : null}
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   )
 }
 
+/** Answers carry a graph note for the model; the author only wrote the part after "Answer:". */
+function stripNote(answer: string) {
+  const i = answer.lastIndexOf("\n\nAnswer: ")
+  if (i >= 0) return answer.slice(i + "\n\nAnswer: ".length)
+  if (answer.startsWith("Applied.") || answer.startsWith("(Your drawing"))
+    return "Applied the change."
+  if (answer.startsWith("Undone")) return "Undid the change."
+  return answer
+}
+
 function QuestionCard({
+  number,
   question,
   change,
   disabled,
   onAnswer,
   onEnough,
 }: {
+  number: number
   question: Extract<Turn, { kind: "question" }> | null
   /** A drawing change that came with this question, already applied. */
   change: {
@@ -607,80 +793,175 @@ function QuestionCard({
 }) {
   // Keyed on the turn count by the parent, so a new question starts blank.
   const [other, setOther] = React.useState("")
+  const [writing, setWriting] = React.useState(false)
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null)
+  const options = React.useMemo(() => question?.options ?? [], [question])
+
+  // 1–5 answer with the keyboard; no animation on keyboard-driven actions.
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (disabled || writing) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest("input, textarea, [contenteditable]")) return
+      const n = Number(e.key)
+      if (n >= 1 && n <= options.length && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        onAnswer(options[n - 1])
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [disabled, writing, options, onAnswer])
+
+  React.useEffect(() => {
+    if (writing) textareaRef.current?.focus()
+  }, [writing])
+
   if (!question) return null
   return (
-    <div className="space-y-3">
+    <div className="enter space-y-4">
       {change && (
-        <div className="rounded-md border border-dashed px-3 py-2 text-xs">
-          <span className="text-muted-foreground">✎ {change.text}</span>
-          {change.status === "working" && <Spinner className="ml-2 inline" />}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-muted/60 px-3 py-2 text-xs">
+          <HugeiconsIcon
+            icon={PencilEdit02Icon}
+            strokeWidth={2}
+            className="size-3.5 text-muted-foreground"
+          />
+          <span className="text-muted-foreground">{change.text}</span>
+          {change.status === "working" && <Spinner className="size-3" />}
           {change.status === "applied" && (
             <button
               type="button"
               onClick={change.onUndo}
               disabled={disabled}
-              className="ml-2 underline-offset-2 hover:underline"
+              className="pressable inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium hover:bg-background"
             >
+              <HugeiconsIcon
+                icon={ArrowTurnBackwardIcon}
+                strokeWidth={2}
+                className="size-3"
+              />
               Undo
             </button>
           )}
           {change.status === "undone" && (
-            <span className="ml-2 text-muted-foreground">(undone)</span>
+            <span className="text-muted-foreground">undone</span>
           )}
           {change.status === "failed" && (
-            <span className="ml-2 text-destructive">could not be applied</span>
+            <span className="text-destructive">could not be applied</span>
           )}
           {change.skipped.length > 0 && (
-            <p className="mt-1 text-destructive">
+            <p className="basis-full text-destructive">
               Skipped: {change.skipped.join("; ")}
             </p>
           )}
         </div>
       )}
-      <p className="text-sm font-medium" title={question.reason}>
-        {question.text}
-      </p>
-      <div className="flex flex-col gap-2">
-        {question.options.map((opt) => (
-          <Button
-            key={opt}
-            variant="outline"
-            className="h-auto justify-start py-2 text-left whitespace-normal"
-            disabled={disabled}
-            onClick={() => onAnswer(opt)}
-          >
-            {opt}
-          </Button>
-        ))}
+
+      <div className="space-y-1">
+        <p className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
+          Question {number}
+        </p>
+        <p
+          className="text-[15px] leading-snug font-medium"
+          title={question.reason}
+        >
+          {question.text}
+        </p>
       </div>
-      <form
-        className="flex flex-col gap-2"
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (other.trim()) onAnswer(other.trim())
-        }}
-      >
-        <Textarea
-          placeholder="Something else…"
-          value={other}
-          onChange={(e) => setOther(e.target.value)}
-          disabled={disabled}
-          rows={2}
-        />
+
+      <ol className="enter-stagger space-y-1.5">
+        {options.map((opt, i) => (
+          <li key={opt}>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => onAnswer(opt)}
+              className="pressable group flex w-full items-start gap-3 rounded-lg border bg-card px-3 py-2.5 text-left text-sm hover:border-foreground/30 hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none disabled:opacity-50"
+            >
+              <kbd className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border bg-background font-mono text-[10px] text-muted-foreground group-hover:border-foreground/30">
+                {i + 1}
+              </kbd>
+              <span className="leading-snug">{opt}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+
+      {writing ? (
+        <form
+          className="enter space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (other.trim()) onAnswer(other.trim())
+          }}
+        >
+          <Textarea
+            ref={textareaRef}
+            placeholder="Say it in your own words. Enter to send, Shift+Enter for a new line."
+            value={other}
+            onChange={(e) => setOther(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && other.trim()) {
+                e.preventDefault()
+                onAnswer(other.trim())
+              }
+            }}
+            disabled={disabled}
+            rows={3}
+          />
+          <div className="flex items-center justify-between">
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setWriting(false)}
+                className="pressable text-xs text-muted-foreground hover:text-foreground"
+              >
+                Back to the options
+              </button>
+              <button
+                type="button"
+                onClick={onEnough}
+                disabled={disabled}
+                className="pressable text-xs text-muted-foreground hover:text-foreground"
+              >
+                Enough — write the brief
+              </button>
+            </div>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={disabled || !other.trim()}
+            >
+              <HugeiconsIcon
+                icon={Sent02Icon}
+                strokeWidth={2}
+                data-icon="inline-start"
+              />
+              Send
+            </Button>
+          </div>
+        </form>
+      ) : (
         <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setWriting(true)}
+            disabled={disabled}
+            className="pressable rounded-md px-1 py-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            Something else…
+          </button>
           <button
             type="button"
             onClick={onEnough}
             disabled={disabled}
-            className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+            className="pressable rounded-md px-1 py-1 text-xs text-muted-foreground hover:text-foreground"
           >
             Enough — write the brief
           </button>
-          <Button type="submit" size="sm" disabled={disabled || !other.trim()}>
-            Send
-          </Button>
         </div>
-      </form>
+      )}
     </div>
   )
 }
