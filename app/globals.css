@@ -38,8 +38,8 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --color-lime: var(--lime);
-  --color-lime-foreground: var(--lime-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
   --color-lavender: var(--lavender);
   --color-peach: var(--peach);
   --color-forest: var(--forest);
@@ -73,17 +73,17 @@
   --accent: oklch(0.925 0.012 95); /* hover surface */
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.6 0.2 30);
-  --border: oklch(0.2 0.01 120 / 8%);
-  --input: oklch(0.2 0.01 120 / 10%);
-  --ring: oklch(0.86 0.2 125);
+  --border: transparent; /* fill separates surfaces; no hairlines */
+  --input: oklch(0.945 0.008 95);
+  --ring: oklch(0.52 0.13 125);
   /* the family */
-  --lime: oklch(0.92 0.2 125); /* #c9f76f */
-  --lime-foreground: var(--foreground);
+  --brand: oklch(0.52 0.13 125); /* #5d7e08 olive */
+  --brand-foreground: oklch(0.985 0.005 95);
   --lavender: oklch(0.86 0.09 315); /* "done for you" */
   --peach: oklch(0.78 0.16 45); /* "needs you" */
   --forest: oklch(0.32 0.06 155); /* the headline card */
   --forest-foreground: oklch(0.94 0.06 125);
-  --chart-1: var(--lime);
+  --chart-1: var(--brand);
   --chart-2: var(--lavender);
   --chart-3: var(--peach);
   --chart-4: var(--forest);
@@ -102,29 +102,29 @@
 .dark {
   --background: oklch(0.17 0.012 150); /* deep forest-black */
   --foreground: oklch(0.95 0.01 110);
-  --card: oklch(0.22 0.012 150);
+  --card: oklch(0.25 0.012 150); /* a clear step above the ground: no borders to help */
   --card-foreground: var(--foreground);
-  --popover: oklch(0.22 0.012 150);
+  --popover: oklch(0.25 0.012 150);
   --popover-foreground: var(--foreground);
-  --primary: var(--lime);
-  --primary-foreground: oklch(0.2 0.01 120);
-  --secondary: oklch(0.26 0.012 150);
+  --primary: var(--foreground);
+  --primary-foreground: oklch(0.17 0.012 150);
+  --secondary: oklch(0.31 0.012 150);
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.26 0.012 150);
-  --muted-foreground: oklch(0.7 0.015 120);
-  --accent: oklch(0.3 0.014 150);
+  --muted: oklch(0.31 0.012 150);
+  --muted-foreground: oklch(0.72 0.015 120);
+  --accent: oklch(0.36 0.014 150);
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.7 0.17 30);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.86 0.2 125);
-  --lime: oklch(0.9 0.2 125);
-  --lime-foreground: oklch(0.2 0.01 120);
+  --border: transparent;
+  --input: oklch(0.31 0.012 150);
+  --ring: oklch(0.72 0.15 125);
+  --brand: oklch(0.72 0.15 125); /* olive, lifted for the dark ground */
+  --brand-foreground: oklch(0.17 0.012 150);
   --lavender: oklch(0.7 0.1 315);
   --peach: oklch(0.72 0.16 45);
   --forest: oklch(0.28 0.06 155);
   --forest-foreground: oklch(0.94 0.06 125);
-  --chart-1: var(--lime);
+  --chart-1: var(--brand);
   --chart-2: var(--lavender);
   --chart-3: var(--peach);
   --chart-4: var(--forest);
@@ -340,7 +340,7 @@
 .excalidraw .sidebar.reframe-panel {
   background: var(--card);
   color: var(--foreground);
-  border-left: 1px solid var(--border);
+  border: 0;
 }
 /* Floating (undocked): a card inset from the edges, like the rest of the UI. */
 .excalidraw .sidebar:not(.sidebar--docked) {
@@ -348,11 +348,9 @@
   top: 4.25rem;
   right: 0.75rem;
   bottom: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.06),
-    0 12px 32px -12px rgb(0 0 0 / 0.25);
+  border: 0;
+  border-radius: 1.25rem;
+  box-shadow: none;
 }
 @media (max-width: 640px) {
   .excalidraw > * {
@@ -433,8 +431,8 @@
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 9999px;
-  background: var(--lime);
-  color: var(--lime-foreground);
+  background: var(--brand);
+  color: var(--brand-foreground);
 }
 .excalidraw
   .layer-ui__wrapper__top-right
@@ -450,8 +448,8 @@
   .layer-ui__wrapper__top-right
   [aria-pressed="true"]
   > .sidebar-trigger {
-  background: var(--lime) !important;
-  color: var(--lime-foreground) !important;
+  background: var(--brand) !important;
+  color: var(--brand-foreground) !important;
 }
 .excalidraw
   .layer-ui__wrapper__top-right
@@ -511,12 +509,8 @@
   --button-gray-3: var(--muted-foreground);
   --border-radius-lg: var(--radius);
   --border-radius-md: calc(var(--radius) * 0.8);
-  --shadow-island:
-    0 0 0 1px var(--border), 0 1px 2px rgb(0 0 0 / 0.04),
-    0 8px 24px -12px rgb(0 0 0 / 0.18);
-  --shadow-island-stronger:
-    0 0 0 1px var(--border), 0 2px 4px rgb(0 0 0 / 0.06),
-    0 12px 32px -12px rgb(0 0 0 / 0.28);
+  --shadow-island: none;
+  --shadow-island-stronger: none;
   --sidebar-shadow: var(--shadow-island-stronger);
   --modal-shadow: var(--shadow-island-stronger);
 
@@ -532,7 +526,7 @@
   /* selected tool / checked option: a quiet tint, not an inverted pill */
   --color-surface-primary-container: color-mix(
     in oklab,
-    var(--lime) 55%,
+    var(--brand) 22%,
     transparent
   );
   --color-on-primary-container: var(--foreground);
@@ -651,4 +645,31 @@
 [data-slot="alert-dialog-overlay"],
 [data-slot="alert-dialog-content"] {
   z-index: 100;
+}
+
+/* No shadows, no hairlines: surfaces are told apart by fill alone. */
+[data-slot="button"],
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"],
+[data-slot="input"],
+[data-slot="textarea"],
+.shadow-xs,
+.excalidraw .Island,
+.excalidraw .Modal__content,
+.excalidraw .dropdown-menu-container {
+  box-shadow: none !important;
+}
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"] {
+  --tw-ring-color: transparent;
+}
+[data-slot="input"],
+[data-slot="textarea"] {
+  border-color: transparent;
+  background: var(--secondary);
+}
+.excalidraw .Modal__content,
+.excalidraw .sidebar-trigger,
+.excalidraw .help-icon {
+  border: 0;
 }

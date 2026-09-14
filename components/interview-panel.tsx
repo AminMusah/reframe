@@ -744,7 +744,7 @@ function EmptyState({ nodeCount }: { nodeCount: number }) {
       <ol className="enter-stagger space-y-3">
         {steps.map(([title, body], i) => (
           <li key={title} className="flex gap-3">
-            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-lime font-mono text-[11px] font-medium text-lime-foreground">
+            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-brand font-mono text-[11px] font-medium text-brand-foreground">
               {i + 1}
             </span>
             <div>
@@ -1015,7 +1015,7 @@ function QuestionCard({
               onClick={() => onAnswer(opt)}
               className="option-row pressable group flex w-full items-start gap-3 rounded-xl border border-transparent bg-secondary px-3 py-2.5 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
             >
-              <kbd className="option-key mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary font-mono text-[10px] text-muted-foreground group-hover:bg-lime group-hover:text-lime-foreground">
+              <kbd className="option-key mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary font-mono text-[10px] text-muted-foreground group-hover:bg-brand group-hover:text-brand-foreground">
                 {i + 1}
               </kbd>
               <span className="leading-snug">{opt}</span>

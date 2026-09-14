@@ -206,7 +206,7 @@ export function Chrome({
             <span className="flex items-center gap-2 font-sans text-2xl font-semibold tracking-tight text-foreground">
               <span
                 aria-hidden
-                className="inline-block size-4 rounded-[5px] bg-lime"
+                className="inline-block size-4 rounded-[5px] bg-brand"
               />
               Reframe
             </span>

@@ -21,6 +21,11 @@ import { Chrome, type ChromeDialog } from "./chrome"
 import { loadScene } from "./load-scene"
 
 export const PANEL = "reframe"
+/**
+ * The canvas is the app's warm ground, so floating white cards read as cards
+ * with no border or shadow. Excalidraw inverts it itself in dark mode.
+ */
+const CANVAS_BG = "#f7f7f2"
 const DRAWINGS = "drawings"
 
 export type CanvasProps = {
@@ -66,7 +71,11 @@ export default function ExcalidrawCanvas({
       // Everything floats: Excalidraw's own sidebar (search, library) too.
       return {
         ...data,
-        appState: { ...data?.appState, defaultSidebarDockedPreference: false },
+        appState: {
+          ...data?.appState,
+          defaultSidebarDockedPreference: false,
+          viewBackgroundColor: CANVAS_BG,
+        },
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -192,11 +201,11 @@ export default function ExcalidrawCanvas({
                 !panelShown &&
                 (isMobile ? (
                   <span
-                    className="absolute top-1 right-1 size-2 rounded-full bg-lime ring-2 ring-background"
+                    className="absolute top-1 right-1 size-2 rounded-full bg-brand ring-2 ring-background"
                     aria-label={panelBadge}
                   />
                 ) : (
-                  <span className="rounded-full bg-lime px-1.5 py-0.5 text-[10px] leading-none font-medium text-lime-foreground">
+                  <span className="rounded-full bg-brand px-1.5 py-0.5 text-[10px] leading-none font-medium text-brand-foreground">
                     {panelBadge}
                   </span>
                 ))}
@@ -221,7 +230,7 @@ export default function ExcalidrawCanvas({
             <span className="flex items-center gap-1.5 font-sans text-sm font-semibold tracking-tight text-foreground">
               <span
                 aria-hidden
-                className="inline-block size-2.5 rounded-[3px] bg-lime"
+                className="inline-block size-2.5 rounded-[3px] bg-brand"
               />
               Reframe
             </span>
