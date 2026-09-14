@@ -21,15 +21,16 @@ import type { Id } from "@/convex/_generated/dataModel"
 import { clearMirror } from "@/lib/scene-store"
 import { cn } from "@/lib/utils"
 
-/** The drawing list (one project per drawing): open, create, delete. A floating dialog, not a drawer. */
-export function DrawingsDialog({
-  open,
-  onOpenChange,
+/**
+ * The drawing list (one project per drawing): open, create, delete. Rendered
+ * inside an Excalidraw sidebar so it floats like the interview panel.
+ */
+export function DrawingsList({
   currentId,
+  onClose,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
   currentId: Id<"projects">
+  onClose: () => void
 }) {
   const router = useRouter()
   const projects = useQuery(api.projects.list)
@@ -39,22 +40,18 @@ export function DrawingsDialog({
   const [confirmId, setConfirmId] = React.useState<Id<"projects"> | null>(null)
 
   const openProject = (id: Id<"projects">) => {
-    onOpenChange(false)
+    onClose()
     router.push(`/?p=${id}`)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Drawings</DialogTitle>
-          <DialogDescription>
-            Each drawing keeps its own interviews and prompts. Names come from
-            the drawing&apos;s title.
-          </DialogDescription>
-        </DialogHeader>
-
-        <ul className="-mx-2 flex max-h-[50vh] flex-col gap-0.5 overflow-y-auto">
+    <div className="flex h-full flex-col">
+      <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+        <p className="text-xs text-muted-foreground">
+          Each drawing keeps its own interviews and prompts. Names come from the
+          drawing&apos;s title.
+        </p>
+        <ul className="-mx-2 flex flex-col gap-0.5">
           {projects?.map((p) => (
             <li key={p._id} className="group flex items-center gap-1">
               <button
@@ -77,7 +74,7 @@ export function DrawingsDialog({
                       clearMirror(p._id)
                       setConfirmId(null)
                       if (p._id === currentId) {
-                        onOpenChange(false)
+                        onClose()
                         router.replace("/")
                       }
                     }}
@@ -106,32 +103,31 @@ export function DrawingsDialog({
             </li>
           ))}
         </ul>
-
-        <div className="space-y-2">
-          {createError && (
-            <p className="text-xs text-destructive">{createError}</p>
-          )}
-          <Button
-            className="w-full"
-            onClick={async () => {
-              setCreateError(null)
-              try {
-                openProject(await create({}))
-              } catch (err) {
-                setCreateError(
-                  err instanceof ConvexError
-                    ? ((err.data as { message?: string }).message ??
-                        "Couldn't create the drawing.")
-                    : "Couldn't create the drawing."
-                )
-              }
-            }}
-          >
-            New drawing
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+      <div className="space-y-2 border-t px-5 py-4">
+        {createError && (
+          <p className="text-xs text-destructive">{createError}</p>
+        )}
+        <Button
+          className="w-full"
+          onClick={async () => {
+            setCreateError(null)
+            try {
+              openProject(await create({}))
+            } catch (err) {
+              setCreateError(
+                err instanceof ConvexError
+                  ? ((err.data as { message?: string }).message ??
+                      "Couldn't create the drawing.")
+                  : "Couldn't create the drawing."
+              )
+            }
+          }}
+        >
+          New drawing
+        </Button>
+      </div>
+    </div>
   )
 }
 

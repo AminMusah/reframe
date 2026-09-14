@@ -25,7 +25,7 @@ import * as React from "react"
 
 import { HelpDialog } from "@/components/help-dialog"
 import { KeyDialog } from "@/components/key-dialog"
-import { DrawingsDialog, RenameDialog } from "@/components/project-menu"
+import { RenameDialog } from "@/components/project-menu"
 import { SignInDialog } from "@/components/account-menu"
 import {
   AlertDialog,
@@ -52,7 +52,7 @@ const icon = (i: typeof Key01Icon) => (
  * own menu and welcome screen so the canvas is the whole window.
  */
 export type ChromeDialog =
-  "projects" | "rename" | "delete" | "key" | "signin" | "help" | null
+  "rename" | "delete" | "key" | "signin" | "help" | null
 
 export function Chrome({
   projectId,
@@ -104,7 +104,12 @@ export function Chrome({
         <MainMenu.Group title={projectName}>
           <MainMenu.Item
             icon={icon(FolderOpenIcon)}
-            onSelect={() => setDialog("projects")}
+            onSelect={() =>
+              excalidraw.current?.toggleSidebar({
+                name: "drawings",
+                force: true,
+              })
+            }
           >
             Drawings…
           </MainMenu.Item>
@@ -237,11 +242,6 @@ export function Chrome({
         </WelcomeScreen.Hints.MenuHint>
       </WelcomeScreen>
 
-      <DrawingsDialog
-        open={dialog === "projects"}
-        onOpenChange={(o) => !o && close()}
-        currentId={projectId}
-      />
       <RenameDialog
         key={`${projectId}:${projectName}`}
         open={dialog === "rename"}
