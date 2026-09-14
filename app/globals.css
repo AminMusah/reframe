@@ -569,3 +569,11 @@
   content: "Installed libraries";
   font-size: 1.125rem;
 }
+
+/* Our dialogs sit above Excalidraw's UI (its mobile bottom bar is z-index 60). */
+[data-slot="dialog-overlay"],
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-overlay"],
+[data-slot="alert-dialog-content"] {
+  z-index: 100;
+}
