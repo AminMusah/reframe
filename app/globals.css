@@ -466,12 +466,11 @@
 :root .excalidraw .help-icon {
   display: none;
 }
-/* The "Mermaid to Excalidraw" item in the more-tools menu. It shares its
-   test id with Web Embed, so it is addressed as the later sibling. */
+/* More-tools menu: no Web Embed (an iframe the model cannot read) and no
+   "Mermaid to Excalidraw"; both carry the same test id. */
 :root
   .excalidraw
   .App-toolbar
-  .dropdown-menu-item[data-testid="toolbar-embeddable"]
-  ~ .dropdown-menu-item[data-testid="toolbar-embeddable"] {
+  .dropdown-menu-item[data-testid="toolbar-embeddable"] {
   display: none;
 }
