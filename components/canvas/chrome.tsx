@@ -8,6 +8,7 @@ import {
   HelpCircleIcon,
   Flowchart01Icon,
   Book02Icon,
+  Eraser01Icon,
   Image02Icon,
   Key01Icon,
   Login03Icon,
@@ -52,7 +53,7 @@ const icon = (i: typeof Key01Icon) => (
  * own menu and welcome screen so the canvas is the whole window.
  */
 export type ChromeDialog =
-  "rename" | "delete" | "key" | "signin" | "help" | null
+  "rename" | "delete" | "clear" | "key" | "signin" | "help" | null
 
 export function Chrome({
   projectId,
@@ -151,7 +152,12 @@ export function Chrome({
         </MainMenu.Item>
         <MainMenu.DefaultItems.SaveAsImage />
         <MainMenu.DefaultItems.SearchMenu />
-        <MainMenu.DefaultItems.ClearCanvas />
+        <MainMenu.Item
+          icon={icon(Eraser01Icon)}
+          onSelect={() => setDialog("clear")}
+        >
+          Clear the canvas…
+        </MainMenu.Item>
         <MainMenu.Separator />
         <MainMenu.Item icon={icon(Key01Icon)} onSelect={() => setDialog("key")}>
           {apiKey ? "Model & API key" : "Add an API key…"}
@@ -258,6 +264,29 @@ export function Chrome({
         open={dialog === "signin"}
         onOpenChange={(o) => !o && close()}
       />
+      <AlertDialog
+        open={dialog === "clear"}
+        onOpenChange={(o) => !o && close()}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear the canvas?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Everything drawn in “{projectName}” is removed. Undo cannot bring
+              it back, but the drawing itself stays.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => excalidraw.current?.resetScene()}
+            >
+              Clear
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog
         open={dialog === "delete"}
         onOpenChange={(o) => !o && close()}
