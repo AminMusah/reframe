@@ -3,7 +3,7 @@
 import { Excalidraw, Sidebar, useHandleLibrary } from "@excalidraw/excalidraw"
 import "@excalidraw/excalidraw/index.css"
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types"
-import { SparklesIcon } from "@hugeicons/core-free-icons"
+import { FolderOpenIcon, SparklesIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useTheme } from "next-themes"
 import * as React from "react"
@@ -89,6 +89,27 @@ export default function ExcalidrawCanvas({
   // and persists the library in this browser.
   useHandleLibrary({ excalidrawAPI: api, adapter: libraryAdapter })
   const [panelShown, setPanelShown] = React.useState(false)
+  // Fit the drawing on load when the saved viewport cannot be trusted to show
+  // it: small screens, or a scene saved without one.
+  const fitted = React.useRef(false)
+  React.useEffect(() => {
+    if (!api || fitted.current) return
+    fitted.current = true
+    const t = setTimeout(() => {
+      const els = api.getSceneElements()
+      const { scrollX, scrollY } = api.getAppState()
+      const narrow = window.innerWidth < 900
+      if (els.length && (narrow || (!scrollX && !scrollY))) {
+        void api.setViewport({
+          target: els,
+          fit: "scale-down",
+          offsets: { ui: true },
+        })
+      }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [api])
+
   React.useEffect(() => {
     if (panelOpen && apiReady && !opened.current && apiRef.current) {
       opened.current = true
@@ -140,7 +161,7 @@ export default function ExcalidrawCanvas({
         UIOptions={{
           canvasActions: { loadScene: false, saveToActiveFile: false },
         }}
-        renderTopRightUI={() => (
+        renderTopRightUI={(isMobile) => (
           <>
             <button
               type="button"
@@ -150,19 +171,31 @@ export default function ExcalidrawCanvas({
                 apiRef.current?.toggleSidebar({ name: DRAWINGS, force: true })
               }
             >
-              {project.name}
+              {isMobile ? (
+                <HugeiconsIcon icon={FolderOpenIcon} strokeWidth={2} />
+              ) : (
+                project.name
+              )}
             </button>
             <Sidebar.Trigger
               name={PANEL}
               title="A short interview, then a prompt for your coding agent"
               icon={<HugeiconsIcon icon={SparklesIcon} strokeWidth={2} />}
             >
-              Generate prompt
-              {panelBadge && !panelShown && (
-                <span className="rounded-full bg-foreground px-1.5 py-0.5 text-[10px] leading-none font-medium text-background">
-                  {panelBadge}
-                </span>
-              )}
+              {/* Phones get the icon and a dot; the words need the room. */}
+              {isMobile ? null : "Generate prompt"}
+              {panelBadge &&
+                !panelShown &&
+                (isMobile ? (
+                  <span
+                    className="absolute top-1 right-1 size-2 rounded-full bg-foreground"
+                    aria-label={panelBadge}
+                  />
+                ) : (
+                  <span className="rounded-full bg-foreground px-1.5 py-0.5 text-[10px] leading-none font-medium text-background">
+                    {panelBadge}
+                  </span>
+                ))}
             </Sidebar.Trigger>
           </>
         )}

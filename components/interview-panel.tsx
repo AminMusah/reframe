@@ -985,9 +985,9 @@ function QuestionCard({
               type="button"
               disabled={disabled}
               onClick={() => onAnswer(opt)}
-              className="pressable group flex w-full items-start gap-3 rounded-lg border bg-card px-3 py-2.5 text-left text-sm hover:border-foreground/30 hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none disabled:opacity-50"
+              className="option-row pressable group flex w-full items-start gap-3 rounded-lg border bg-card px-3 py-2.5 text-left text-sm hover:border-foreground/30 hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none disabled:opacity-50"
             >
-              <kbd className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border bg-background font-mono text-[10px] text-muted-foreground group-hover:border-foreground/30">
+              <kbd className="option-key mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border bg-background font-mono text-[10px] text-muted-foreground group-hover:border-foreground/30">
                 {i + 1}
               </kbd>
               <span className="leading-snug">{opt}</span>

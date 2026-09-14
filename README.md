@@ -1,6 +1,8 @@
 # Reframe
 
-Draw a diagram, get interviewed about it, paste the resulting brief into Claude Code or Cursor. Design and decisions: [`docs/DESIGN.md`](docs/DESIGN.md).
+Draw what you're building, answer a short interview about it, get a prompt your coding agent (Claude Code, Codex, Cursor…) can build from. Live at [reframe-liard.vercel.app](https://reframe-liard.vercel.app). Design and decisions: [`docs/DESIGN.md`](docs/DESIGN.md).
+
+The canvas is the whole window (Excalidraw, themed with the app's own tokens). Everything else floats over it: ☰ for drawings, export, model & key, theme, sign-in and shortcuts; the drawing's name and **✦ Generate prompt** top-right; the interview panel, the drawings list, search and the shape library as floating cards. Works on phones (the panel goes full-screen, options are tap-sized).
 
 ## Local development
 
@@ -23,7 +25,7 @@ npx convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
 npx convex env set SITE_URL http://localhost:3000
 ```
 
-Open the app, paste an Anthropic API key in the header (it stays in your browser), draw, click **Reframe**.
+Open the app, draw (or *Load an example drawing*), click **✦ Generate prompt**, paste an API key when the panel asks (it stays in your browser), then **Start the interview**.
 
 ## Scripts
 

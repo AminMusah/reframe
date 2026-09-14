@@ -332,11 +332,29 @@
     0 12px 32px -12px rgb(0 0 0 / 0.25);
 }
 @media (max-width: 640px) {
-  .excalidraw .sidebar:not(.sidebar--docked) {
+  .excalidraw > * {
+    --right-sidebar-width: 100vw;
+  }
+  :root .excalidraw .sidebar {
+    width: 100vw;
     top: 0;
     right: 0;
     bottom: 0;
     border-radius: 0;
+    border: 0;
+  }
+}
+/* Phones: the trigger is a square; the badge becomes a dot in its corner. */
+.excalidraw .layer-ui__wrapper__top-right .sidebar-trigger {
+  position: relative;
+}
+/* Touch: the 1–5 key hints mean nothing, and rows want more height. */
+@media (pointer: coarse) {
+  .option-key {
+    display: none;
+  }
+  .option-row {
+    padding-block: 0.875rem;
   }
 }
 .excalidraw .sidebar.reframe-panel .sidebar__header {
