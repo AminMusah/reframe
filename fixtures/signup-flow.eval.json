@@ -1,0 +1,16 @@
+{
+  "intent": "Sign-up for a web app. A visitor enters an email on the Sign up screen and we send a magic link; 'Verified?' is whether they clicked it within 15 minutes. 'yes' goes to a 3-step Onboarding (name, workspace name, invite teammates — all skippable). 'no' shows a Resend link screen with a 60-second cooldown, max 3 resends, then a support email. 'skip' lets them browse as a guest with read-only access; a guest can finish sign-up later from a banner. No passwords anywhere; Google sign-in is a later addition, not v1.",
+  "rubric": {
+    "mustAsk": [
+      "what 'Verified?' checks (magic link vs code vs password)",
+      "what Onboarding contains",
+      "what 'skip' / browsing as a guest allows, and whether a guest can convert later",
+      "what happens after Resend link (limits, cooldown, failure)"
+    ],
+    "mustNotAsk": [
+      "the shape of the diamond",
+      "colours or fonts"
+    ],
+    "maxTurns": 8
+  }
+}

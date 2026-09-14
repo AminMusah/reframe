@@ -120,7 +120,7 @@ export default function ExcalidrawCanvas({
   const loadExample = async () => {
     const api = apiRef.current
     if (!api) return
-    const res = await fetch("/examples/three-tier.excalidraw")
+    const res = await fetch("/examples/signup-flow.excalidraw")
     const file = (await res.json()) as {
       elements: unknown[]
       appState?: Record<string, unknown>
