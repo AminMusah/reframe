@@ -447,8 +447,13 @@
   --color-brand-hover: var(--foreground);
   --color-primary-light: var(--accent);
   --color-primary-light-darker: var(--accent);
-  --color-surface-primary-container: var(--foreground);
-  --color-on-primary-container: var(--background);
+  /* selected tool / checked option: a quiet tint, not an inverted pill */
+  --color-surface-primary-container: color-mix(
+    in oklab,
+    var(--foreground) 12%,
+    transparent
+  );
+  --color-on-primary-container: var(--foreground);
   --button-hover-bg: var(--accent);
   --button-active-bg: var(--accent);
   --button-active-border: var(--foreground);
