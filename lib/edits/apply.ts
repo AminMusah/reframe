@@ -49,6 +49,8 @@ export function applyEdit(input: ApplyInput): ApplyResult {
   const refs = new Map<string, { id: string; box: Box }>()
   const changed = new Set<string>()
   const skipped: string[] = []
+  // Which way each added box was placed, so the tidy pass pushes neighbours that way.
+  const seeds = new Map<string, { dx: number; dy: number }>()
 
   const touch = (el: Mutable<ExcalidrawElement>) => {
     el.version += 1
@@ -83,12 +85,9 @@ export function applyEdit(input: ApplyInput): ApplyResult {
           skipped.push(`add "${op.label}": ${op.place.of} not found`)
           break
         }
-        const occupied = [
-          ...Object.values(boxes),
-          ...[...refs.values()].map((r) => r.box),
-        ]
-        const box = placeNextTo(anchor.box, op.place.relative, occupied)
+        const box = placeNextTo(anchor.box, op.place.relative)
         const id = randomId()
+        seeds.set(id, DIRECTION[op.place.relative])
         const skeleton: Skeleton =
           op.type === "text"
             ? { type: "text", id, text: op.label, x: box.x, y: box.y }
@@ -267,7 +266,7 @@ export function applyEdit(input: ApplyInput): ApplyResult {
 
   // Breathing room: size boxes for their labels, push neighbours, route arrows.
   const all = [...byId.values(), ...added]
-  tidy(all, changed, input.measure ?? measureText)
+  tidy(all, changed, input.measure ?? measureText, seeds)
 
   return {
     elements: all,
@@ -316,7 +315,20 @@ export const measureText: Measure = (text, fontSize, fontFamily) => {
 type Relative = Extract<EditOp, { op: "add" }>["place"]["relative"]
 
 /** Next to `of` in the given direction, stepping further out until nothing overlaps. */
-function placeNextTo(of: Box, relative: Relative, occupied: Box[]): Box {
+const DIRECTION: Record<Relative, { dx: number; dy: number }> = {
+  right: { dx: 1, dy: 0 },
+  left: { dx: -1, dy: 0 },
+  above: { dx: 0, dy: -1 },
+  below: { dx: 0, dy: 1 },
+  inside: { dx: 0, dy: 0 },
+}
+
+/**
+ * The spot right next to `of`. Whatever is already there gets pushed out of
+ * the way by the tidy pass, in the same direction — so "below X" inserts a
+ * row rather than skipping to the bottom of the drawing.
+ */
+function placeNextTo(of: Box, relative: Relative): Box {
   const w = Math.min(Math.max(of.w, 120), 260)
   const h = Math.min(Math.max(of.h, 50), 120)
   if (relative === "inside") {
@@ -324,32 +336,19 @@ function placeNextTo(of: Box, relative: Relative, occupied: Box[]): Box {
     const ih = Math.max(40, Math.min(of.h * 0.35, DEFAULT_H))
     return { x: of.x + (of.w - iw) / 2, y: of.y + of.h * 0.3, w: iw, h: ih }
   }
-  const step: Record<Exclude<Relative, "inside">, [number, number]> = {
-    right: [1, 0],
-    left: [-1, 0],
-    above: [0, -1],
-    below: [0, 1],
-  }
-  const [sx, sy] = step[relative]
-  let box: Box = {
-    x: of.x + sx * (sx > 0 ? of.w + GAP : GAP + w),
-    y: of.y + sy * (sy > 0 ? of.h + GAP : GAP + h),
+  const { dx, dy } = DIRECTION[relative]
+  return {
+    x:
+      dx === 0
+        ? of.x + (of.w - w) / 2
+        : of.x + dx * (dx > 0 ? of.w + GAP : GAP + w),
+    y:
+      dy === 0
+        ? of.y + (of.h - h) / 2
+        : of.y + dy * (dy > 0 ? of.h + GAP : GAP + h),
     w,
     h,
   }
-  // Containers legitimately overlap what they contain; only dodge boxes that
-  // are not much bigger than the new one.
-  const blockers = occupied.filter((b) => b.w * b.h < box.w * box.h * 4)
-  for (let i = 0; i < 6 && blockers.some((b) => overlaps(b, box)); i++) {
-    box = { ...box, x: box.x + sx * (w + GAP), y: box.y + sy * (h + GAP) }
-  }
-  return box
-}
-
-function overlaps(a: Box, b: Box): boolean {
-  return (
-    a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
-  )
 }
 
 /** Edge midpoints facing each other, plus the matching fixedPoint for each binding. */

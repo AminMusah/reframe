@@ -34,7 +34,7 @@ const MAX_W = 320 // a label wraps beyond this box width
 const MIN_W = 100
 const MIN_H = 56
 const GAP = 28 // between neighbouring boxes
-const ARROW_MARGIN = 16 // between an arrow label and the boxes it joins
+const ARROW_MARGIN = 20 // between an arrow label and the boxes it joins
 const ARROW_LABEL_W = 200 // an arrow label wraps beyond this
 const MAX_SHOVE = 260 // a box is never moved further than this to make room
 const ROUTE_CLEAR = 36 // how far a rerouted arrow passes an obstacle
@@ -54,11 +54,18 @@ const cy = (b: Box) => b.y + b.h / 2
 export function tidy(
   elements: El[],
   changedIds: Set<string>,
-  measure: Measure
+  measure: Measure,
+  /** Which way an added box was placed; pushes from it go that way. */
+  seeds: Map<string, { dx: number; dy: number }> = new Map()
 ): void {
   const live = elements.filter((e) => !e.isDeleted)
   const byId = new Map(live.map((e) => [e.id, e]))
   const shapes = live.filter((e) => SHAPES.has(e.type))
+  // Free-standing text (a title, a note) takes part in the overlap pushes.
+  const freeText = live.filter(
+    (e) => e.type === "text" && !(e as Text).containerId
+  )
+  const pushable = [...shapes, ...freeText]
   const labelOf = (el: El): Text | undefined => {
     const b = el.boundElements?.find((x) => x.type === "text")
     return b ? (byId.get(b.id) as Text | undefined) : undefined
@@ -68,11 +75,14 @@ export function tidy(
   )
 
   // Containers: shapes that hold other shapes. They are not pushed and they
-  // do not push; at the end they grow to keep what they held.
+  // do not push; at the end they grow to keep what they held. A box the edit
+  // just added does not count as a child: dropped onto a bigger shape, it is
+  // an overlap to resolve.
   const children = new Map<string, Set<string>>()
   for (const outer of shapes) {
     for (const inner of shapes) {
-      if (outer !== inner && contains(box(outer), box(inner))) {
+      if (outer === inner || seeds.has(inner.id)) continue
+      if (contains(box(outer), box(inner))) {
         if (!children.has(outer.id)) children.set(outer.id, new Set())
         children.get(outer.id)!.add(inner.id)
       }
@@ -87,7 +97,9 @@ export function tidy(
   const isContainer = (id: string) => children.has(id)
   const moved = new Set<string>()
   // How far each box has been displaced, so pushes continue in that direction.
-  const disp = new Map<string, { dx: number; dy: number }>()
+  const disp = new Map<string, { dx: number; dy: number }>(
+    [...seeds].filter(([, d]) => d.dx || d.dy)
+  )
   const nudge = (el: El, dx: number, dy: number) => {
     el.x += dx
     el.y += dy
@@ -107,9 +119,16 @@ export function tidy(
     const label = labelOf(s)
     if (!label) continue
     const fit = fitLabel(label, measure)
-    const w = Math.max(MIN_W, fit.w + 2 * PAD)
-    const h = Math.max(MIN_H, fit.h + 2 * PAD)
-    if (Math.abs(w - s.width) < 1 && Math.abs(h - s.height) < 1) continue
+    // A diamond's label lives in its inner half; an ellipse's in about 70%.
+    const room = s.type === "diamond" ? 2 : s.type === "ellipse" ? 1.4 : 1
+    // Grow only — a box that merely gained an arrow keeps its size.
+    const w = Math.max(s.width, MIN_W, fit.w * room + 2 * PAD)
+    const h = Math.max(s.height, MIN_H, fit.h * room + 2 * PAD)
+    if (Math.abs(w - s.width) < 1 && Math.abs(h - s.height) < 1) {
+      // Still re-wrap the label to the box it has.
+      label.text = fit.text
+      continue
+    }
     const c = { x: cx(box(s)), y: cy(box(s)) }
     s.x = c.x - w / 2
     s.y = c.y - h / 2
@@ -152,7 +171,12 @@ export function tidy(
       const gap = horizontal
         ? Math.max(tb.x - (fb.x + fb.w), fb.x - (tb.x + tb.w))
         : Math.max(tb.y - (fb.y + fb.h), fb.y - (tb.y + tb.h))
-      const need = (horizontal ? m.w : m.h) + 2 * ARROW_MARGIN
+      // A bent arrow's label sits off-centre on its path: give it more room.
+      const bent = a.points.length > 2 && !isStraight(a.points)
+      const need =
+        (horizontal ? m.w : m.h) +
+        2 * ARROW_MARGIN +
+        (bent ? 2 * ARROW_MARGIN : 0)
       if (gap >= need) continue
       // Never move a box that just grew for its label; prefer the end the edit
       // brought in, then the arrow's target.
@@ -179,17 +203,22 @@ export function tidy(
     let pushes = 0
     while (queue.length && pushes < MAX_PUSHES) {
       const n = byId.get(queue.shift()!)
-      if (!n || !SHAPES.has(n.type) || isContainer(n.id)) continue
-      for (const m of shapes) {
+      if (!n || isContainer(n.id)) continue
+      if (!SHAPES.has(n.type) && !freeText.includes(n)) continue
+      for (const m of pushable) {
         if (m === n || isContainer(m.id)) continue
         const nb = box(n)
         const mb = box(m)
         if (!overlapsWithGap(nb, mb, GAP)) continue
-        // Push the way the pusher itself travelled; a box that only grew
-        // pushes along the axis where the two centres are furthest apart.
+        // Push the way the pusher itself travelled — but only things that lie
+        // ahead of it; anything else, and a box that only grew, is pushed
+        // along the axis where the two centres are furthest apart.
         const d = disp.get(n.id)
-        const dx = d && (d.dx || d.dy) ? d.dx : cx(mb) - cx(nb)
-        const dy = d && (d.dx || d.dy) ? d.dy : cy(mb) - cy(nb)
+        const ccx = cx(mb) - cx(nb)
+        const ccy = cy(mb) - cy(nb)
+        const ahead = d && (d.dx || d.dy) && d.dx * ccx + d.dy * ccy > 0
+        const dx = ahead ? d.dx : ccx
+        const dy = ahead ? d.dy : ccy
         let mx = 0
         let my = 0
         if (Math.abs(dx) >= Math.abs(dy)) {
@@ -265,23 +294,36 @@ export function tidy(
     if (!from || !to || !SHAPES.has(from.type) || !SHAPES.has(to.type)) continue
     const endsMoved = moved.has(from.id) || moved.has(to.id)
     if (!endsMoved && !changedIds.has(a.id)) continue
-    const straight = a.points.length === 2 || changedIds.has(a.id)
+    const straight =
+      a.points.length === 2 || changedIds.has(a.id) || isStraight(a.points)
     if (!straight) {
-      // A hand-drawn multi-point arrow: only its ends follow the boxes.
-      const fb = before.get(from.id)
-      const tb = before.get(to.id)
-      if (fb && moved.has(from.id)) {
-        a.x += from.x - fb.x
-        a.y += from.y - fb.y
+      // A hand-drawn multi-point arrow keeps its shape; only its ends move,
+      // each staying on the same edge of its box, at the same spot along it.
+      const last = a.points.length - 1
+      const scene = a.points.map(([px, py]) => [a.x + px, a.y + py])
+      const fb0 = before.get(from.id)
+      const tb0 = before.get(to.id)
+      if (moved.has(from.id) && fb0) {
+        const p = sameEdge(fb0, box(from), { x: scene[0][0], y: scene[0][1] })
+        scene[0] = [p.x, p.y]
       }
-      if (tb && moved.has(to.id)) {
-        const last = a.points.length - 1
-        const ddx = to.x - tb.x - (fb && moved.has(from.id) ? from.x - fb.x : 0)
-        const ddy = to.y - tb.y - (fb && moved.has(from.id) ? from.y - fb.y : 0)
-        a.points = a.points.map((p, i) =>
-          i === last ? [p[0] + ddx, p[1] + ddy] : p
-        ) as unknown as typeof a.points
+      if (moved.has(to.id) && tb0) {
+        const p = sameEdge(tb0, box(to), {
+          x: scene[last][0],
+          y: scene[last][1],
+        })
+        scene[last] = [p.x, p.y]
       }
+      a.x = scene[0][0]
+      a.y = scene[0][1]
+      a.points = scene.map(([sx, sy]) => [
+        sx - a.x,
+        sy - a.y,
+      ]) as unknown as typeof a.points
+      const xs = scene.map((q) => q[0])
+      const ys = scene.map((q) => q[1])
+      a.width = Math.max(...xs) - Math.min(...xs)
+      a.height = Math.max(...ys) - Math.min(...ys)
       continue
     }
     const fb = box(from)
@@ -304,6 +346,33 @@ export function tidy(
       ]
       a.startBinding = { ...a.startBinding!, fixedPoint: sp }
       a.endBinding = { ...a.endBinding!, fixedPoint: ep }
+    } else if (Math.abs(cy(tb) - cy(fb)) > Math.abs(cx(tb) - cx(fb))) {
+      // A mostly vertical arrow detours left or right of the obstacles.
+      const xLeft = Math.min(
+        Math.min(...crossing.map((o) => o.x)) - ROUTE_CLEAR,
+        fb.x - ROUTE_CLEAR / 2,
+        tb.x - ROUTE_CLEAR / 2
+      )
+      const xRight = Math.max(
+        Math.max(...crossing.map((o) => o.x + o.width)) + ROUTE_CLEAR,
+        fb.x + fb.w + ROUTE_CLEAR / 2,
+        tb.x + tb.w + ROUTE_CLEAR / 2
+      )
+      const costLeft = fb.x - xLeft + (tb.x - xLeft)
+      const costRight = xRight - (fb.x + fb.w) + (xRight - (tb.x + tb.w))
+      const left = costLeft <= costRight
+      const xClear = left ? xLeft : xRight
+      const s0 = { x: left ? fb.x : fb.x + fb.w, y: cy(fb) }
+      const e0 = { x: left ? tb.x : tb.x + tb.w, y: cy(tb) }
+      origin = s0
+      points = [
+        [0, 0],
+        [xClear - s0.x, 0],
+        [xClear - s0.x, e0.y - s0.y],
+        [e0.x - s0.x, e0.y - s0.y],
+      ]
+      a.startBinding = { ...a.startBinding!, fixedPoint: [left ? 0 : 1, 0.5] }
+      a.endBinding = { ...a.endBinding!, fixedPoint: [left ? 0 : 1, 0.5] }
     } else {
       // Go over or under the obstacles, whichever is the shorter detour.
       const yTop = Math.min(
@@ -401,6 +470,45 @@ export function fitLabel(
     ...lines.map((l) => measure(l, label.fontSize, label.fontFamily).w)
   )
   return { text: lines.join("\n"), w, h: lines.length * lineH }
+}
+
+/** A polyline whose interior points all lie on the start→end line. */
+function isStraight(points: readonly (readonly [number, number])[]): boolean {
+  const [x0, y0] = points[0]
+  const [x1, y1] = points[points.length - 1]
+  const len = Math.hypot(x1 - x0, y1 - y0) || 1
+  return points.every(([x, y]) => {
+    const d = Math.abs((y1 - y0) * x - (x1 - x0) * y + x1 * y0 - y1 * x0) / len
+    return d <= 3
+  })
+}
+
+/**
+ * A point that sat on (or near) one edge of `was` lands on the same edge of
+ * `now`, the same fraction of the way along it.
+ */
+function sameEdge(was: Box, now: Box, p: { x: number; y: number }) {
+  const d = {
+    left: Math.abs(p.x - was.x),
+    right: Math.abs(p.x - (was.x + was.w)),
+    top: Math.abs(p.y - was.y),
+    bottom: Math.abs(p.y - (was.y + was.h)),
+  }
+  const edge = (Object.keys(d) as (keyof typeof d)[]).reduce((a, b) =>
+    d[a] <= d[b] ? a : b
+  )
+  const tx = was.w ? (p.x - was.x) / was.w : 0.5
+  const ty = was.h ? (p.y - was.y) / was.h : 0.5
+  switch (edge) {
+    case "left":
+      return { x: now.x, y: now.y + now.h * ty }
+    case "right":
+      return { x: now.x + now.w, y: now.y + now.h * ty }
+    case "top":
+      return { x: now.x + now.w * tx, y: now.y }
+    default:
+      return { x: now.x + now.w * tx, y: now.y + now.h }
+  }
 }
 
 /** The offset along an edge stored in a fixedPoint (the component that is not 0 or 1). */

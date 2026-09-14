@@ -14,6 +14,8 @@ import { libraryAdapter } from "@/lib/library-store"
 import type { SerializedScene } from "@/lib/serializer"
 
 import { DrawingsList } from "@/components/project-menu"
+import { applyEdit } from "@/lib/edits/apply"
+import { serializeScene } from "@/lib/serializer"
 
 import { Chrome, type ChromeDialog } from "./chrome"
 import { loadScene } from "./load-scene"
@@ -138,6 +140,18 @@ export default function ExcalidrawCanvas({
           apiRef.current = api
           setApi(api)
           onApi?.(api)
+          if (process.env.NODE_ENV === "development") {
+            // Test hook: replay edit ops against the live canvas (see scripts/).
+            void import("@excalidraw/excalidraw").then((m) => {
+              ;(window as unknown as Record<string, unknown>).__reframe = {
+                api,
+                applyEdit,
+                serializeScene,
+                convert: m.convertToExcalidrawElements,
+                CaptureUpdateAction: m.CaptureUpdateAction,
+              }
+            })
+          }
         }}
         theme={resolvedTheme === "dark" ? "dark" : "light"}
         // No Excalidraw AI tab; the Mermaid tab of that dialog is reached from our menu.
