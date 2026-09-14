@@ -55,57 +55,39 @@
 
 /* ---------- Tokens ----------
    Warm ground, near-black ink, one loud lime, a small pastel family for
-   meaning, big radii, fill over outline. Everything — panels, dialogs and the
-   Excalidraw chrome — reads from these. */
-/* ---------- Tokens ----------
-   White ground, neutral ink, soft grey surfaces (fill, never outline), one
-   cobalt accent for actions, a small pastel family for meaning, big radii.
-   Everything — panels, dialogs and the Excalidraw chrome — reads from these. */
-/* ---------- Tokens ----------
-   Palette: #27374D navy · #526D82 slate · #9DB2BF mist · #DDE6ED frost, on a
-   white ground. Navy is the ink and the primary button, slate the accent,
-   frost the surfaces. Fill, never outline; no shadows; big radii.
+   meaning, big radii; fill over outline — no borders, no shadows.
    Everything — panels, dialogs and the Excalidraw chrome — reads from these. */
 :root {
-  --navy: #27374d;
-  --slate: #526d82;
-  --mist: #9db2bf;
-  --frost: #dde6ed;
-
-  --background: #ffffff;
-  --foreground: var(--navy);
-  --card: color-mix(
-    in oklab,
-    var(--frost) 55%,
-    white
-  ); /* panels, islands, dialogs */
-  --card-foreground: var(--navy);
-  --popover: var(--card);
-  --popover-foreground: var(--navy);
-  --primary: var(--navy);
-  --primary-foreground: #ffffff;
-  --secondary: #ffffff; /* rows and fields inside a frost card */
-  --secondary-foreground: var(--navy);
-  --muted: var(--frost);
-  --muted-foreground: var(--slate);
-  --accent: var(--frost); /* hover surface */
-  --accent-foreground: var(--navy);
-  --destructive: oklch(0.58 0.2 25);
+  --background: oklch(0.975 0.006 95); /* warm off-white */
+  --foreground: oklch(0.2 0.01 120); /* warm near-black */
+  --card: oklch(1 0 0); /* white cards on the warm ground */
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --primary-foreground: oklch(0.985 0.005 95);
+  --secondary: oklch(0.955 0.008 95); /* rows and fields inside a white card */
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.945 0.008 95);
+  --muted-foreground: oklch(0.5 0.015 110);
+  --accent: oklch(0.925 0.012 95); /* hover surface */
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.6 0.2 30);
   --border: transparent; /* fill separates surfaces; no hairlines */
-  --input: #ffffff;
-  --ring: var(--slate);
+  --input: oklch(0.955 0.008 95);
+  --ring: oklch(0.86 0.2 125);
   /* the family */
-  --brand: var(--slate); /* the one accent */
-  --brand-foreground: #ffffff;
-  --lavender: var(--frost); /* "done for you" */
-  --peach: oklch(0.82 0.12 55); /* "needs you" — the one warm note */
-  --forest: var(--navy); /* the headline card */
-  --forest-foreground: var(--frost);
-  --chart-1: var(--slate);
-  --chart-2: var(--mist);
+  --brand: oklch(0.92 0.2 125); /* lime #c9f76f — the one accent */
+  --brand-foreground: var(--foreground);
+  --lavender: oklch(0.86 0.09 315); /* "done for you" */
+  --peach: oklch(0.78 0.16 45); /* "needs you" */
+  --forest: oklch(0.32 0.06 155); /* the headline card */
+  --forest-foreground: oklch(0.94 0.06 125);
+  --chart-1: var(--brand);
+  --chart-2: var(--lavender);
   --chart-3: var(--peach);
-  --chart-4: var(--navy);
-  --chart-5: var(--frost);
+  --chart-4: var(--forest);
+  --chart-5: var(--muted-foreground);
   --radius: 1rem;
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
@@ -118,35 +100,37 @@
 }
 
 .dark {
-  --background: #1a2536; /* a step below navy */
-  --foreground: var(--frost);
-  --card: var(--navy);
-  --card-foreground: var(--frost);
-  --popover: var(--navy);
-  --popover-foreground: var(--frost);
-  --primary: var(--frost);
-  --primary-foreground: var(--navy);
-  --secondary: #34475f; /* rows inside a navy card */
-  --secondary-foreground: var(--frost);
-  --muted: #34475f;
-  --muted-foreground: var(--mist);
-  --accent: #3f546d;
-  --accent-foreground: var(--frost);
-  --destructive: oklch(0.7 0.17 25);
+  --background: oklch(0.17 0.012 150); /* deep forest-black */
+  --foreground: oklch(0.95 0.01 110);
+  --card: oklch(
+    0.25 0.012 150
+  ); /* a clear step above the ground: no borders to help */
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.25 0.012 150);
+  --popover-foreground: var(--foreground);
+  --primary: var(--brand);
+  --primary-foreground: oklch(0.2 0.01 120);
+  --secondary: oklch(0.31 0.012 150);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.31 0.012 150);
+  --muted-foreground: oklch(0.72 0.015 120);
+  --accent: oklch(0.36 0.014 150);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.7 0.17 30);
   --border: transparent;
-  --input: #34475f;
-  --ring: var(--mist);
-  --brand: var(--mist);
-  --brand-foreground: var(--navy);
-  --lavender: #3f546d;
-  --peach: oklch(0.72 0.14 55);
-  --forest: #142030;
-  --forest-foreground: var(--frost);
-  --chart-1: var(--mist);
-  --chart-2: var(--slate);
+  --input: oklch(0.31 0.012 150);
+  --ring: oklch(0.86 0.2 125);
+  --brand: oklch(0.9 0.2 125);
+  --brand-foreground: oklch(0.2 0.01 120);
+  --lavender: oklch(0.7 0.1 315);
+  --peach: oklch(0.72 0.16 45);
+  --forest: oklch(0.28 0.06 155);
+  --forest-foreground: oklch(0.94 0.06 125);
+  --chart-1: var(--brand);
+  --chart-2: var(--lavender);
   --chart-3: var(--peach);
-  --chart-4: var(--frost);
-  --chart-5: var(--navy);
+  --chart-4: var(--forest);
+  --chart-5: var(--muted-foreground);
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
@@ -453,8 +437,8 @@
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 9999px;
-  background: var(--frost);
-  color: var(--navy);
+  background: var(--brand);
+  color: var(--brand-foreground);
 }
 .excalidraw
   .layer-ui__wrapper__top-right
@@ -478,8 +462,8 @@
   [aria-pressed="true"]
   > .sidebar-trigger
   > div:first-child {
-  background: var(--frost);
-  color: var(--navy);
+  background: var(--foreground);
+  color: var(--background);
 }
 
 /* ---------- Excalidraw wears our tokens ----------
@@ -548,7 +532,7 @@
   /* selected tool / checked option: a quiet tint, not an inverted pill */
   --color-surface-primary-container: color-mix(
     in oklab,
-    var(--brand) 22%,
+    var(--brand) 55%,
     transparent
   );
   --color-on-primary-container: var(--foreground);
