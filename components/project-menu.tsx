@@ -16,20 +16,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { clearMirror } from "@/lib/scene-store"
 import { cn } from "@/lib/utils"
 
-/** The drawing list (one project per drawing): open, create, delete. */
-export function DrawingsSheet({
+/** The drawing list (one project per drawing): open, create, delete. A floating dialog, not a drawer. */
+export function DrawingsDialog({
   open,
   onOpenChange,
   currentId,
@@ -51,17 +44,17 @@ export function DrawingsSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-80">
-        <SheetHeader>
-          <SheetTitle>Drawings</SheetTitle>
-          <SheetDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Drawings</DialogTitle>
+          <DialogDescription>
             Each drawing keeps its own interviews and prompts. Names come from
             the drawing&apos;s title.
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-        <ul className="flex flex-col gap-0.5 overflow-y-auto px-2 py-1">
+        <ul className="-mx-2 flex max-h-[50vh] flex-col gap-0.5 overflow-y-auto">
           {projects?.map((p) => (
             <li key={p._id} className="group flex items-center gap-1">
               <button
@@ -114,7 +107,7 @@ export function DrawingsSheet({
           ))}
         </ul>
 
-        <div className="mt-auto space-y-2 px-4 pb-4">
+        <div className="space-y-2">
           {createError && (
             <p className="text-xs text-destructive">{createError}</p>
           )}
@@ -137,8 +130,8 @@ export function DrawingsSheet({
             New drawing
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
 

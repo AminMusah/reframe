@@ -1,6 +1,6 @@
 "use client"
 
-import { Excalidraw, Sidebar } from "@excalidraw/excalidraw"
+import { Excalidraw, Sidebar, useHandleLibrary } from "@excalidraw/excalidraw"
 import "@excalidraw/excalidraw/index.css"
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types"
 import { SparklesIcon } from "@hugeicons/core-free-icons"
@@ -10,6 +10,7 @@ import * as React from "react"
 
 import type { Id } from "@/convex/_generated/dataModel"
 import { useAutosave, type SaveStatus } from "@/hooks/use-autosave"
+import { libraryAdapter } from "@/lib/library-store"
 import type { SerializedScene } from "@/lib/serializer"
 
 import { Chrome, type ChromeDialog } from "./chrome"
@@ -67,7 +68,11 @@ export default function ExcalidrawCanvas({
     () => async () => {
       const { data, dirty } = await loadScene(projectId, project)
       prime(data, dirty)
-      return data
+      // Everything floats: Excalidraw's own sidebar (search, library) too.
+      return {
+        ...data,
+        appState: { ...data?.appState, defaultSidebarDockedPreference: false },
+      }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [projectId]
@@ -75,7 +80,11 @@ export default function ExcalidrawCanvas({
 
   // An interview in progress brings the panel with it on load.
   const opened = React.useRef(false)
-  const [apiReady, setApiReady] = React.useState(false)
+  const [api, setApi] = React.useState<ExcalidrawImperativeAPI | null>(null)
+  const apiReady = api !== null
+  // Installs libraries arriving via #addLibrary (from libraries.excalidraw.com)
+  // and persists the library in this browser.
+  useHandleLibrary({ excalidrawAPI: api, adapter: libraryAdapter })
   const [panelShown, setPanelShown] = React.useState(false)
   React.useEffect(() => {
     if (panelOpen && apiReady && !opened.current && apiRef.current) {
@@ -113,12 +122,18 @@ export default function ExcalidrawCanvas({
         onChange={onChange}
         onExcalidrawAPI={(api) => {
           apiRef.current = api
-          setApiReady(true)
+          setApi(api)
           onApi?.(api)
         }}
         theme={resolvedTheme === "dark" ? "dark" : "light"}
         // No Excalidraw AI tab; the Mermaid tab of that dialog is reached from our menu.
         aiEnabled={false}
+        // "Browse libraries" sends the author to excalidraw.com and back here.
+        libraryReturnUrl={
+          typeof window === "undefined"
+            ? undefined
+            : `${window.location.origin}/?p=${projectId}`
+        }
         UIOptions={{
           canvasActions: { loadScene: false, saveToActiveFile: false },
         }}

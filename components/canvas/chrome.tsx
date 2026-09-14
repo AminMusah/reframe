@@ -7,6 +7,7 @@ import {
   FolderOpenIcon,
   HelpCircleIcon,
   Flowchart01Icon,
+  Book02Icon,
   Image02Icon,
   Key01Icon,
   Login03Icon,
@@ -24,7 +25,7 @@ import * as React from "react"
 
 import { HelpDialog } from "@/components/help-dialog"
 import { KeyDialog } from "@/components/key-dialog"
-import { DrawingsSheet, RenameDialog } from "@/components/project-menu"
+import { DrawingsDialog, RenameDialog } from "@/components/project-menu"
 import { SignInDialog } from "@/components/account-menu"
 import {
   AlertDialog,
@@ -131,6 +132,18 @@ export function Chrome({
         >
           Diagram from Mermaid…
         </MainMenu.Item>
+        <MainMenu.Item
+          icon={icon(Book02Icon)}
+          onSelect={() =>
+            excalidraw.current?.toggleSidebar({
+              name: "default",
+              tab: "library",
+              force: true,
+            })
+          }
+        >
+          Shape library
+        </MainMenu.Item>
         <MainMenu.DefaultItems.SaveAsImage />
         <MainMenu.DefaultItems.SearchMenu />
         <MainMenu.DefaultItems.ClearCanvas />
@@ -224,7 +237,7 @@ export function Chrome({
         </WelcomeScreen.Hints.MenuHint>
       </WelcomeScreen>
 
-      <DrawingsSheet
+      <DrawingsDialog
         open={dialog === "projects"}
         onOpenChange={(o) => !o && close()}
         currentId={projectId}
