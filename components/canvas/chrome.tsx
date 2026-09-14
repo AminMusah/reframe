@@ -280,7 +280,10 @@ export function Chrome({
             <AlertDialogCancel>Keep it</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              onClick={() => excalidraw.current?.resetScene()}
+              onClick={() => {
+                excalidraw.current?.resetScene()
+                close()
+              }}
             >
               Clear
             </AlertDialogAction>
@@ -300,7 +303,13 @@ export function Chrome({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep it</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={deleteProject}>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                close()
+                void deleteProject()
+              }}
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
