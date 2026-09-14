@@ -4,6 +4,8 @@ import type { convertToExcalidrawElements } from "@excalidraw/excalidraw"
 import type { EditOp } from "@/lib/llm/interview"
 import type { Box } from "@/lib/serializer"
 
+import { tidy, type Measure } from "./tidy"
+
 type Convert = typeof convertToExcalidrawElements
 type Skeleton = Parameters<Convert>[0] extends (infer S)[] | null ? S : never
 type Mutable<T> = { -readonly [K in keyof T]: T[K] }
@@ -16,6 +18,8 @@ export type ApplyInput = {
   /** Short id → scene-pixel box, from the serializer. */
   boxes: Record<string, Box>
   convert: Convert
+  /** Text metrics for the tidy pass; defaults to a canvas measurement. */
+  measure?: Measure
 }
 
 export type ApplyResult = {
@@ -261,10 +265,51 @@ export function applyEdit(input: ApplyInput): ApplyResult {
     }
   }
 
+  // Breathing room: size boxes for their labels, push neighbours, route arrows.
+  const all = [...byId.values(), ...added]
+  tidy(all, changed, input.measure ?? measureText)
+
   return {
-    elements: [...byId.values(), ...added],
+    elements: all,
     changedIds: [...changed].filter((id) => !byId.get(id)?.isDeleted),
     skipped,
+  }
+}
+
+// Excalidraw's font family ids → the faces it registers.
+const FONT_NAMES: Record<number, string> = {
+  1: "Virgil",
+  2: "Helvetica",
+  3: "Cascadia",
+  5: "Excalifont",
+  6: "Nunito",
+  7: "Lilita One",
+  8: "Comic Shanns",
+  9: "Liberation Sans",
+}
+
+let canvasCtx: CanvasRenderingContext2D | null | undefined
+
+/** Text metrics from a canvas when there is one; a width estimate otherwise. */
+export const measureText: Measure = (text, fontSize, fontFamily) => {
+  const lineH = fontSize * 1.25
+  if (canvasCtx === undefined) {
+    canvasCtx =
+      typeof document === "undefined"
+        ? null
+        : document.createElement("canvas").getContext("2d")
+  }
+  if (canvasCtx) {
+    canvasCtx.font = `${fontSize}px ${FONT_NAMES[fontFamily] ?? "Excalifont"}, sans-serif`
+    const w = Math.max(
+      ...text.split("\n").map((line) => canvasCtx!.measureText(line).width)
+    )
+    return { w: Math.ceil(w), h: lineH * text.split("\n").length }
+  }
+  const longest = Math.max(...text.split("\n").map((l) => l.length))
+  return {
+    w: Math.ceil(longest * fontSize * 0.6),
+    h: lineH * text.split("\n").length,
   }
 }
 
