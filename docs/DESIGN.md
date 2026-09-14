@@ -118,21 +118,21 @@ Four nouns, one verb. Code and model prompts keep the older internal names in pa
 
 ### Design system (2026-09-14)
 
-Drawn from three references the author brought (their portfolio, a warm one-pager, and a set of mobile mockups) — the thread through all of them: **white ground, neutral ink, soft grey surfaces, one cobalt accent, fill over outline — no borders, no shadows — big radii, a geometric rounded sans.** Everything is a token in `app/globals.css` (`:root` / `.dark`), and the Excalidraw chrome reads the same tokens.
+Palette from the author (colorhunt `27374d · 526d82 · 9db2bf · dde6ed`) on a white ground. Everything is a token in `app/globals.css` (`:root` / `.dark`), and the Excalidraw chrome reads the same tokens.
 
-| Token | Light | Role |
+| Token | Value | Role |
 |---|---|---|
 | `--background` | white | the canvas (`viewBackgroundColor #ffffff`) |
-| `--card` | #f4f4f5 grey | floating panels, islands, dialogs — grey cards on the white canvas |
-| `--secondary` | white | rows and fields inside a grey card |
-| `--foreground` / `--primary` | #18181b | ink; black pill buttons |
-| `--brand` | cobalt | the one accent: Generate prompt disc (cobalt pill while open), badge, selected tool, step numbers, option-key hover |
-| `--lavender` | soft violet | "done for you" — the drawing-change pill with Undo |
-| `--peach` | orange | "needs you" — changing an answer, errors' warmth |
-| `--forest` | deep green | the headline card ("What we settled on") |
-| `--radius` | 1rem | cards 16–29 px; every button is a pill; icon buttons are discs |
+| `--foreground` / `--primary` | navy `#27374d` | ink; black-ish pill buttons |
+| `--card` | frost at 55 % on white | floating panels, islands, dialogs — no border, no shadow |
+| `--secondary` | white | rows and fields inside a card |
+| `--muted` / `--accent` | frost `#dde6ed` | hover surface, kbd discs |
+| `--muted-foreground` / `--brand` | slate `#526d82` | secondary text; the one accent (Generate prompt pill while open, badge, selected tool, step numbers) |
+| `--peach` | soft orange | the one warm note: "needs you" (drawing changed, changing an answer) |
+| `--lavender` → frost, `--forest` → navy | | "done for you" pill; the headline card |
+| `--radius` | 1rem | cards 16–29 px; every button a pill (default 40 px tall); icon buttons discs |
 
-Dark mode is neutral near-black with the cobalt lifted a step; surfaces sit a clear step above the ground because nothing else separates them. Font: **Outfit** (`--font-sans`), Geist Mono for code. **No shadows and no borders anywhere** (`--border: transparent`, Excalidraw's island/modal shadows off, dialog rings off): the canvas stays white and every floating surface is a grey card, so fill alone separates them. Tried and rejected on the way: lime `#c9f76f` (too loud), olive `#5d7e08` on a warm ground (did not land).
+The Generate prompt trigger is a navy pill with a frost disc for the icon; while the panel is open it turns slate. Dark mode inverts the ladder: ground a step below navy, cards navy, rows `#34475f`, ink frost, accent mist. Font **Outfit**, Geist Mono for code. No shadows and no borders anywhere (`--border: transparent`, Excalidraw's island/modal shadows off, dialog rings off). Tried and rejected on the way: lime `#c9f76f` (too loud), olive `#5d7e08` on a warm ground (did not land), cobalt on white (fine, but the author's palette is better).
 
 ### Design pass (v1.2)
 
