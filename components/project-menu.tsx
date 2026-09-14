@@ -27,15 +27,18 @@ import { cn } from "@/lib/utils"
  */
 export function DrawingsList({
   currentId,
+  currentName,
   onClose,
 }: {
   currentId: Id<"projects">
+  currentName: string
   onClose: () => void
 }) {
   const router = useRouter()
   const projects = useQuery(api.projects.list)
   const create = useMutation(api.projects.create)
   const remove = useMutation(api.projects.remove)
+  const rename = useMutation(api.projects.rename)
   const [createError, setCreateError] = React.useState<string | null>(null)
   const [confirmId, setConfirmId] = React.useState<Id<"projects"> | null>(null)
 
@@ -47,9 +50,15 @@ export function DrawingsList({
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+        <NameField
+          key={`${currentId}:${currentName}`}
+          initialName={currentName}
+          onRename={(name) => rename({ id: currentId, name })}
+        />
         <p className="text-xs text-muted-foreground">
-          Each drawing keeps its own interviews and prompts. Names come from the
-          drawing&apos;s title.
+          Each drawing keeps its own interviews and prompts. An untitled one
+          names itself from the drawing&apos;s title, or from the prompt once
+          there is one.
         </p>
         <ul className="-mx-2 flex flex-col gap-0.5">
           {projects?.map((p) => (
@@ -128,6 +137,40 @@ export function DrawingsList({
         </Button>
       </div>
     </div>
+  )
+}
+
+/** The current drawing's name, edited in place. Keyed on the name by the parent. */
+function NameField({
+  initialName,
+  onRename,
+}: {
+  initialName: string
+  onRename: (name: string) => Promise<unknown>
+}) {
+  const [name, setName] = React.useState(initialName)
+  const commit = () => {
+    const next = name.trim()
+    if (next && next !== initialName) void onRename(next)
+    else setName(initialName)
+  }
+  return (
+    <label className="block space-y-1">
+      <span className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
+        This drawing
+      </span>
+      <Input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur()
+          if (e.key === "Escape") setName(initialName)
+        }}
+        aria-label="Drawing name"
+        className="text-sm font-medium"
+      />
+    </label>
   )
 }
 

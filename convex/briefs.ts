@@ -3,6 +3,7 @@ import { ConvexError, v } from "convex/values"
 import { authComponent } from "./auth"
 import type { MutationCtx, QueryCtx } from "./_generated/server"
 import { internalMutation, mutation, query } from "./_generated/server"
+import { DEFAULT_NAME } from "./projects"
 import { errorCode } from "./schema"
 
 async function requireUserId(ctx: QueryCtx | MutationCtx): Promise<string> {
@@ -89,8 +90,36 @@ export const complete = internalMutation({
   args: { id: v.id("briefs"), text: v.string() },
   handler: async (ctx, { id, text }) => {
     await ctx.db.patch(id, { text, status: "done", lastError: undefined })
+    // An unnamed drawing takes its name from what the prompt says it is.
+    const brief = await ctx.db.get(id)
+    const interview = brief && (await ctx.db.get(brief.interviewId))
+    const project = interview && (await ctx.db.get(interview.projectId))
+    if (project && project.name === DEFAULT_NAME) {
+      const name = nameFromBrief(text)
+      if (name) await ctx.db.patch(project._id, { name })
+    }
   },
 })
+
+/**
+ * "# Goal ⏎ Build a responsive login screen for returning users. It must…"
+ * → "Responsive login screen for returning users".
+ */
+export function nameFromBrief(text: string): string | null {
+  const m = text.match(/#\s*Goal\s*\n+([^\n]+)/i)
+  if (!m) return null
+  let s = m[1]
+    .split(/(?<=[.!?])\s/)[0]
+    .replace(/[.!?]+$/, "")
+    .trim()
+  s = s.replace(
+    /^(build|create|implement|design|develop|make|ship)\s+(a|an|the)?\s*/i,
+    ""
+  )
+  if (!s) return null
+  s = s[0].toUpperCase() + s.slice(1)
+  return s.length > 48 ? s.slice(0, 47).trimEnd() + "…" : s
+}
 
 export const setError = internalMutation({
   args: { id: v.id("briefs"), code: errorCode },

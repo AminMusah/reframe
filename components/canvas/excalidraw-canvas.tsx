@@ -20,7 +20,6 @@ import { loadScene } from "./load-scene"
 
 export const PANEL = "reframe"
 const DRAWINGS = "drawings"
-const DOCK_KEY = "reframe:panel-docked"
 
 export type CanvasProps = {
   projectId: Id<"projects">
@@ -50,15 +49,6 @@ export default function ExcalidrawCanvas({
   const { onChange, status, scene, sceneHash, prime } = useAutosave(projectId)
   const apiRef = React.useRef<ExcalidrawImperativeAPI | null>(null)
   const [dialog, setDialog] = React.useState<ChromeDialog>(null)
-  // Floats over the canvas unless the author pins it. Lazy initial read:
-  // this component only renders client-side.
-  const [docked, setDocked] = React.useState(() => {
-    try {
-      return localStorage.getItem(DOCK_KEY) === "1"
-    } catch {
-      return false
-    }
-  })
 
   React.useEffect(() => onStatus?.(status), [onStatus, status])
   React.useEffect(
@@ -210,13 +200,6 @@ export default function ExcalidrawCanvas({
         />
         <Sidebar
           name={PANEL}
-          docked={docked}
-          onDock={(d) => {
-            setDocked(d)
-            try {
-              localStorage.setItem(DOCK_KEY, d ? "1" : "0")
-            } catch {}
-          }}
           className="reframe-panel"
           onStateChange={(state) => setPanelShown(state?.name === PANEL)}
         >
@@ -233,7 +216,7 @@ export default function ExcalidrawCanvas({
             {panel}
           </div>
         </Sidebar>
-        <Sidebar name={DRAWINGS} className="reframe-panel">
+        <Sidebar name={DRAWINGS} className="reframe-panel reframe-panel--left">
           <Sidebar.Header>
             <span className="font-sans text-sm font-semibold tracking-tight text-foreground">
               Drawings
@@ -242,6 +225,7 @@ export default function ExcalidrawCanvas({
           <div className="min-h-0 flex-1 font-sans text-foreground">
             <DrawingsList
               currentId={projectId}
+              currentName={project.name}
               onClose={() =>
                 apiRef.current?.toggleSidebar({ name: DRAWINGS, force: false })
               }

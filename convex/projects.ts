@@ -9,7 +9,7 @@ import {
   type QueryCtx,
 } from "./_generated/server"
 
-const DEFAULT_NAME = "Untitled"
+export const DEFAULT_NAME = "Untitled"
 /** Storage is on the deployment, not the user, so projects per user are bounded. */
 export const MAX_PROJECTS_PER_USER = 25
 

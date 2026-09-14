@@ -339,6 +339,7 @@
     width: 100vw;
     top: 0;
     right: 0;
+    left: 0;
     bottom: 0;
     border-radius: 0;
     border: 0;
@@ -507,6 +508,17 @@
   .dropdown-menu-container
   > div[style*="font-weight: 600"] {
   display: none;
+}
+/* Nothing docks: every panel floats. */
+:root .excalidraw .sidebar__dock {
+  display: none;
+}
+/* The drawings list floats on the left, under the menu button. */
+:root .excalidraw .sidebar.reframe-panel--left {
+  left: 0.75rem;
+  right: auto;
+  /* Clear the zoom controls in the bottom-left corner. */
+  bottom: 4.25rem;
 }
 /* Excalidraw's own help button and dialog are replaced by ours (see chrome.tsx). */
 :root .excalidraw .help-icon {
