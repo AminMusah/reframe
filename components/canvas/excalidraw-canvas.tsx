@@ -218,8 +218,10 @@ export default function ExcalidrawCanvas({
           setDialog={setDialog}
           onLoadExample={loadExample}
         />
+        {/* "docked" so Excalidraw never closes it on a canvas click; CSS keeps it floating. */}
         <Sidebar
           name={PANEL}
+          docked
           className="reframe-panel"
           onStateChange={(state) => setPanelShown(state?.name === PANEL)}
         >
@@ -236,7 +238,11 @@ export default function ExcalidrawCanvas({
             {panel}
           </div>
         </Sidebar>
-        <Sidebar name={DRAWINGS} className="reframe-panel reframe-panel--left">
+        <Sidebar
+          name={DRAWINGS}
+          docked
+          className="reframe-panel reframe-panel--left"
+        >
           <Sidebar.Header>
             <span className="font-sans text-sm font-semibold tracking-tight text-foreground">
               Drawings

@@ -75,7 +75,7 @@ export function BriefView({
         brief.status === "error" ? (
         <div className="space-y-2 text-sm">
           {brief?.status === "error" && (
-            <p className="rounded-xl border border-destructive/40 bg-destructive/5 p-3">
+            <p className="rounded-xl bg-destructive/10 p-3">
               {ERROR_TEXT[brief.lastError ?? "network"]}
             </p>
           )}

@@ -349,14 +349,18 @@
   border: 0;
 }
 /* Floating (undocked): a card inset from the edges, like the rest of the UI. */
-.excalidraw .sidebar:not(.sidebar--docked) {
-  /* Below the toolbar row so the two never fight for the corner. */
+:root .excalidraw .sidebar {
+  /* Every panel floats, docked or not (docked = Excalidraw keeps it open
+     while you draw). Below the toolbar row so the two never fight. */
   top: 4.25rem;
   right: 0.75rem;
   bottom: 0.75rem;
   border: 0;
   border-radius: 1.25rem;
   box-shadow: none;
+}
+:root .excalidraw:has(.sidebar--docked) .layer-ui__wrapper {
+  width: 100% !important;
 }
 @media (max-width: 640px) {
   .excalidraw > * {
@@ -613,25 +617,6 @@
   content: "Paste Mermaid text — flowchart, sequence, class or ER diagrams become editable shapes; other kinds become a picture.";
   font-size: 0.875rem;
   color: var(--muted-foreground);
-}
-/* Excalidraw forces its search tab to dock. Undo that: the sidebar floats like
-   every other panel and the editor UI keeps its full width. */
-:root
-  .excalidraw
-  .sidebar.default-sidebar.sidebar--docked:has(.layer-ui__search) {
-  top: 4.25rem;
-  right: 0.75rem;
-  bottom: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.06),
-    0 12px 32px -12px rgb(0 0 0 / 0.25);
-}
-:root
-  .excalidraw:has(.sidebar.default-sidebar .layer-ui__search)
-  .layer-ui__wrapper {
-  width: 100% !important;
 }
 /* Library headings: the installed set is not "Excalidraw's". The second
    header (the one with an inline top margin) is the installed-libraries one. */

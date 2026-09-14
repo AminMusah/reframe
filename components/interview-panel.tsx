@@ -712,9 +712,9 @@ function Notice({
   return (
     <div
       className={cn(
-        "rounded-xl border p-4 text-sm",
-        tone === "warn" && "border-amber-500/40 bg-amber-500/10",
-        tone === "error" && "border-destructive/40 bg-destructive/5",
+        "rounded-xl p-4 text-sm",
+        tone === "warn" && "bg-peach/30",
+        tone === "error" && "bg-destructive/10",
         className
       )}
     >
