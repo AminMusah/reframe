@@ -21,11 +21,8 @@ import { Chrome, type ChromeDialog } from "./chrome"
 import { loadScene } from "./load-scene"
 
 export const PANEL = "reframe"
-/**
- * The canvas is the app's warm ground, so floating white cards read as cards
- * with no border or shadow. Excalidraw inverts it itself in dark mode.
- */
-const CANVAS_BG = "#f7f7f2"
+/** The canvas is white; panels are soft grey cards on it. Excalidraw inverts it in dark mode. */
+const CANVAS_BG = "#ffffff"
 const DRAWINGS = "drawings"
 
 export type CanvasProps = {
