@@ -84,7 +84,24 @@ export const start = mutation({
         })
       }
     }
-    await ctx.db.patch(args.projectId, { pngFileId: args.pngFileId })
+    // Earlier interviews of this drawing keep their text; the picture only
+    // matters while one is running, and the new one has its own.
+    const earlier = await ctx.db
+      .query("interviews")
+      .withIndex("by_project_and_createdAt", (q) =>
+        q.eq("projectId", args.projectId)
+      )
+      .collect()
+    for (const old of earlier) {
+      if (old.pngFileId && old.pngFileId !== args.pngFileId) {
+        await ctx.storage.delete(old.pngFileId)
+        await ctx.db.patch(old._id, { pngFileId: undefined })
+      }
+    }
+    if (project.pngFileId) {
+      await ctx.storage.delete(project.pngFileId)
+      await ctx.db.patch(args.projectId, { pngFileId: undefined })
+    }
     return ctx.db.insert("interviews", {
       ...args,
       ownerId: userId,
@@ -216,6 +233,9 @@ export const rebase = mutation({
   },
   handler: async (ctx, { id, sceneHash, graph, pngFileId, turnIndex }) => {
     const interview = await ownedInterview(ctx, id)
+    if (pngFileId && interview.pngFileId && interview.pngFileId !== pngFileId) {
+      await ctx.storage.delete(interview.pngFileId)
+    }
     await ctx.db.patch(id, {
       sceneHash,
       graph,

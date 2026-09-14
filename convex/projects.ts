@@ -11,7 +11,7 @@ import {
 
 export const DEFAULT_NAME = "Untitled"
 /** Storage is on the deployment, not the user, so projects per user are bounded. */
-export const MAX_PROJECTS_PER_USER = 25
+export const MAX_PROJECTS_PER_USER = 10
 
 async function requireUserId(ctx: QueryCtx | MutationCtx): Promise<string> {
   const user = await authComponent.getAuthUser(ctx)
