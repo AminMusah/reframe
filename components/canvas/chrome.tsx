@@ -86,11 +86,13 @@ export function Chrome({
       if (e.key !== "?" || e.metaKey || e.ctrlKey) return
       const t = e.target as HTMLElement | null
       if (t?.closest("input, textarea, [contenteditable]")) return
+      // Capture phase, before Excalidraw's own "?" opens its help dialog.
       e.preventDefault()
+      e.stopPropagation()
       setDialog("help")
     }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    window.addEventListener("keydown", onKey, true)
+    return () => window.removeEventListener("keydown", onKey, true)
   }, [setDialog])
 
   const deleteProject = async () => {
@@ -204,7 +206,7 @@ export function Chrome({
             <span className="flex items-center gap-2 font-sans text-2xl font-semibold tracking-tight text-foreground">
               <span
                 aria-hidden
-                className="inline-block size-4 rounded-[4px] bg-foreground"
+                className="inline-block size-4 rounded-[5px] bg-lime"
               />
               Reframe
             </span>

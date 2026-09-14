@@ -233,6 +233,9 @@ export function applyEdit(input: ApplyInput): ApplyResult {
           skipped.push(`delete ${op.id}: not found`)
           break
         }
+        // Already gone with something deleted earlier in this batch (an
+        // arrow follows its node): nothing to report.
+        if (old.isDeleted) break
         touch(old).isDeleted = true
         const label = boundText(old.id)
         if (label) touch(label).isDeleted = true

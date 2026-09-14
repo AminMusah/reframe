@@ -225,7 +225,20 @@ export function InterviewPanel({
     }
     // Edits are in force at once: pin the interview to the new drawing.
     setChangeState({ ...base, skipped, status: "working" })
-    const graph = await rebaseToCanvas(excalidraw, turnIndex)
+    let graph: string
+    try {
+      graph = await rebaseToCanvas(excalidraw, turnIndex)
+    } catch (err) {
+      console.warn("could not pin the edited drawing", err)
+      setChangeState({
+        ...base,
+        skipped,
+        status: "failed",
+        failed:
+          "The change is on the canvas but could not be saved; it will be picked up with your next answer.",
+      })
+      return
+    }
     const note = `(Your drawing change was applied. The drawing is now:\n\n${graph})`
     setChangeState({ ...base, skipped, status: "applied", note })
     if (pendingChange.kind === "edit" && apiKey) {
@@ -541,6 +554,7 @@ export function InterviewPanel({
                       text: changeState.text,
                       status: changeState.status,
                       skipped: changeState.skipped,
+                      failed: changeState.failed,
                       onUndo: undoChange,
                     }
                   : null
@@ -569,12 +583,17 @@ export function InterviewPanel({
         {interview?.status === "done" && (
           <div className="enter space-y-5">
             {doneTurn && (
-              <Card className="space-y-1.5">
-                <CardTitle icon={SparklesIcon}>What we settled on</CardTitle>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {doneTurn.summary}
+              <div className="space-y-1.5 rounded-2xl bg-forest p-4 text-forest-foreground">
+                <p className="flex items-center gap-2 text-xs font-medium tracking-wide uppercase opacity-80">
+                  <HugeiconsIcon
+                    icon={SparklesIcon}
+                    strokeWidth={2}
+                    className="size-3.5"
+                  />
+                  What we settled on
                 </p>
-              </Card>
+                <p className="text-sm leading-relaxed">{doneTurn.summary}</p>
+              </div>
             )}
             {apiKey && (
               <BriefView
@@ -725,7 +744,7 @@ function EmptyState({ nodeCount }: { nodeCount: number }) {
       <ol className="enter-stagger space-y-3">
         {steps.map(([title, body], i) => (
           <li key={title} className="flex gap-3">
-            <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-[10px] text-muted-foreground">
+            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-lime font-mono text-[11px] font-medium text-lime-foreground">
               {i + 1}
             </span>
             <div>
@@ -873,6 +892,7 @@ function QuestionCard({
     text: string
     status: "working" | "applied" | "undone" | "failed"
     skipped: string[]
+    failed?: string
     onUndo: () => void
   } | null
   disabled: boolean
@@ -911,37 +931,45 @@ function QuestionCard({
   return (
     <div className="enter space-y-4">
       {change && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-muted/60 px-3 py-2 text-xs">
-          <HugeiconsIcon
-            icon={PencilEdit02Icon}
-            strokeWidth={2}
-            className="size-3.5 text-muted-foreground"
-          />
-          <span className="text-muted-foreground">{change.text}</span>
-          {change.status === "working" && <Spinner className="size-3" />}
-          {change.status === "applied" && (
-            <button
-              type="button"
-              onClick={change.onUndo}
-              disabled={disabled}
-              className="pressable inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium hover:bg-background"
-            >
-              <HugeiconsIcon
-                icon={ArrowTurnBackwardIcon}
-                strokeWidth={2}
-                className="size-3"
-              />
-              Undo
-            </button>
-          )}
-          {change.status === "undone" && (
-            <span className="text-muted-foreground">undone</span>
-          )}
-          {change.status === "failed" && (
-            <span className="text-destructive">could not be applied</span>
+        <div className="rounded-xl bg-lavender px-3 py-2.5 text-xs text-foreground">
+          <div className="flex items-center gap-2.5">
+            <HugeiconsIcon
+              icon={PencilEdit02Icon}
+              strokeWidth={2}
+              className="size-4 shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">Drawing updated</p>
+              <p className="opacity-80">{change.text}</p>
+            </div>
+            {change.status === "working" && <Spinner className="size-3.5" />}
+            {change.status === "applied" && (
+              <button
+                type="button"
+                onClick={change.onUndo}
+                disabled={disabled}
+                className="pressable inline-flex shrink-0 items-center gap-1 rounded-full bg-card px-3 py-1.5 font-medium shadow-xs"
+              >
+                <HugeiconsIcon
+                  icon={ArrowTurnBackwardIcon}
+                  strokeWidth={2}
+                  className="size-3"
+                />
+                Undo
+              </button>
+            )}
+            {change.status === "undone" && (
+              <span className="shrink-0 opacity-70">Undone</span>
+            )}
+            {change.status === "failed" && (
+              <span className="shrink-0 text-destructive">Not saved</span>
+            )}
+          </div>
+          {change.failed && (
+            <p className="mt-1.5 text-destructive">{change.failed}</p>
           )}
           {change.skipped.length > 0 && (
-            <p className="basis-full text-destructive">
+            <p className="mt-1.5 text-destructive">
               Skipped: {change.skipped.join("; ")}
             </p>
           )}
@@ -949,8 +977,8 @@ function QuestionCard({
       )}
 
       {editing && (
-        <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs">
-          <span className="text-muted-foreground">
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-peach/30 px-3 py-2.5 text-xs">
+          <span>
             Changing your answer
             {editing.later > 0 &&
               ` — the ${editing.later} after it will be asked again`}
@@ -985,9 +1013,9 @@ function QuestionCard({
               type="button"
               disabled={disabled}
               onClick={() => onAnswer(opt)}
-              className="option-row pressable group flex w-full items-start gap-3 rounded-lg border bg-card px-3 py-2.5 text-left text-sm hover:border-foreground/30 hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none disabled:opacity-50"
+              className="option-row pressable group flex w-full items-start gap-3 rounded-xl border border-transparent bg-secondary px-3 py-2.5 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
             >
-              <kbd className="option-key mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border bg-background font-mono text-[10px] text-muted-foreground group-hover:border-foreground/30">
+              <kbd className="option-key mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary font-mono text-[10px] text-muted-foreground group-hover:bg-lime group-hover:text-lime-foreground">
                 {i + 1}
               </kbd>
               <span className="leading-snug">{opt}</span>

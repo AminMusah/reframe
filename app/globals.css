@@ -38,6 +38,12 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
+  --color-lime: var(--lime);
+  --color-lime-foreground: var(--lime-foreground);
+  --color-lavender: var(--lavender);
+  --color-peach: var(--peach);
+  --color-forest: var(--forest);
+  --color-forest-foreground: var(--forest-foreground);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -47,73 +53,90 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ---------- Tokens ----------
+   Warm ground, near-black ink, one loud lime, a small pastel family for
+   meaning, big radii, fill over outline. Everything — panels, dialogs and the
+   Excalidraw chrome — reads from these. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.148 0.004 228.8);
+  --background: oklch(0.975 0.006 95); /* warm off-white */
+  --foreground: oklch(0.2 0.01 120); /* warm near-black */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.148 0.004 228.8);
+  --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.148 0.004 228.8);
-  --primary: oklch(0.218 0.008 223.9);
-  --primary-foreground: oklch(0.987 0.002 197.1);
-  --secondary: oklch(0.963 0.002 197.1);
-  --secondary-foreground: oklch(0.218 0.008 223.9);
-  --muted: oklch(0.963 0.002 197.1);
-  --muted-foreground: oklch(0.56 0.021 213.5);
-  --accent: oklch(0.963 0.002 197.1);
-  --accent-foreground: oklch(0.218 0.008 223.9);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.925 0.005 214.3);
-  --input: oklch(0.925 0.005 214.3);
-  --ring: oklch(0.723 0.014 214.4);
-  --chart-1: oklch(0.872 0.007 219.6);
-  --chart-2: oklch(0.56 0.021 213.5);
-  --chart-3: oklch(0.45 0.017 213.2);
-  --chart-4: oklch(0.378 0.015 216);
-  --chart-5: oklch(0.275 0.011 216.9);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.987 0.002 197.1);
-  --sidebar-foreground: oklch(0.148 0.004 228.8);
-  --sidebar-primary: oklch(0.218 0.008 223.9);
-  --sidebar-primary-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-accent: oklch(0.963 0.002 197.1);
-  --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
-  --sidebar-border: oklch(0.925 0.005 214.3);
-  --sidebar-ring: oklch(0.723 0.014 214.4);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --primary-foreground: oklch(0.985 0.005 95);
+  --secondary: oklch(0.945 0.008 95); /* tinted surface */
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.945 0.008 95);
+  --muted-foreground: oklch(0.5 0.015 110);
+  --accent: oklch(0.925 0.012 95); /* hover surface */
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.6 0.2 30);
+  --border: oklch(0.2 0.01 120 / 8%);
+  --input: oklch(0.2 0.01 120 / 10%);
+  --ring: oklch(0.86 0.2 125);
+  /* the family */
+  --lime: oklch(0.92 0.2 125); /* #c9f76f */
+  --lime-foreground: var(--foreground);
+  --lavender: oklch(0.86 0.09 315); /* "done for you" */
+  --peach: oklch(0.78 0.16 45); /* "needs you" */
+  --forest: oklch(0.32 0.06 155); /* the headline card */
+  --forest-foreground: oklch(0.94 0.06 125);
+  --chart-1: var(--lime);
+  --chart-2: var(--lavender);
+  --chart-3: var(--peach);
+  --chart-4: var(--forest);
+  --chart-5: var(--muted-foreground);
+  --radius: 1rem;
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 .dark {
-  --background: oklch(0.148 0.004 228.8);
-  --foreground: oklch(0.987 0.002 197.1);
-  --card: oklch(0.218 0.008 223.9);
-  --card-foreground: oklch(0.987 0.002 197.1);
-  --popover: oklch(0.218 0.008 223.9);
-  --popover-foreground: oklch(0.987 0.002 197.1);
-  --primary: oklch(0.925 0.005 214.3);
-  --primary-foreground: oklch(0.218 0.008 223.9);
-  --secondary: oklch(0.275 0.011 216.9);
-  --secondary-foreground: oklch(0.987 0.002 197.1);
-  --muted: oklch(0.275 0.011 216.9);
-  --muted-foreground: oklch(0.723 0.014 214.4);
-  --accent: oklch(0.275 0.011 216.9);
-  --accent-foreground: oklch(0.987 0.002 197.1);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.56 0.021 213.5);
-  --chart-1: oklch(0.872 0.007 219.6);
-  --chart-2: oklch(0.56 0.021 213.5);
-  --chart-3: oklch(0.45 0.017 213.2);
-  --chart-4: oklch(0.378 0.015 216);
-  --chart-5: oklch(0.275 0.011 216.9);
-  --sidebar: oklch(0.218 0.008 223.9);
-  --sidebar-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-accent: oklch(0.275 0.011 216.9);
-  --sidebar-accent-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.56 0.021 213.5);
+  --background: oklch(0.17 0.012 150); /* deep forest-black */
+  --foreground: oklch(0.95 0.01 110);
+  --card: oklch(0.22 0.012 150);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.22 0.012 150);
+  --popover-foreground: var(--foreground);
+  --primary: var(--lime);
+  --primary-foreground: oklch(0.2 0.01 120);
+  --secondary: oklch(0.26 0.012 150);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.26 0.012 150);
+  --muted-foreground: oklch(0.7 0.015 120);
+  --accent: oklch(0.3 0.014 150);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.7 0.17 30);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.86 0.2 125);
+  --lime: oklch(0.9 0.2 125);
+  --lime-foreground: oklch(0.2 0.01 120);
+  --lavender: oklch(0.7 0.1 315);
+  --peach: oklch(0.72 0.16 45);
+  --forest: oklch(0.28 0.06 155);
+  --forest-foreground: oklch(0.94 0.06 125);
+  --chart-1: var(--lime);
+  --chart-2: var(--lavender);
+  --chart-3: var(--peach);
+  --chart-4: var(--forest);
+  --chart-5: var(--muted-foreground);
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 @layer base {
@@ -315,7 +338,7 @@
   display: none;
 }
 .excalidraw .sidebar.reframe-panel {
-  background: var(--background);
+  background: var(--card);
   color: var(--foreground);
   border-left: 1px solid var(--border);
 }
@@ -382,21 +405,61 @@
 .excalidraw[data-highlighting] .App-menu__left {
   display: none;
 }
+/* Pills everywhere; icon-only buttons become discs. */
+[data-slot="button"],
+.excalidraw .layer-ui__wrapper__top-right .sidebar-trigger {
+  border-radius: 9999px;
+}
+.excalidraw .layer-ui__wrapper__top-right .sidebar-trigger {
+  padding-inline: 0.9rem;
+  height: 2.5rem;
+}
+/* The Generate prompt trigger is the app's one primary action. */
+.excalidraw
+  .layer-ui__wrapper__top-right
+  [title^="A short interview"]
+  > .sidebar-trigger {
+  background: var(--foreground);
+  color: var(--background);
+  padding-inline-start: 0.35rem;
+}
+.excalidraw
+  .layer-ui__wrapper__top-right
+  [title^="A short interview"]
+  > .sidebar-trigger
+  > div:first-child {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: var(--lime);
+  color: var(--lime-foreground);
+}
+.excalidraw
+  .layer-ui__wrapper__top-right
+  [title^="A short interview"]
+  > .sidebar-trigger
+  > div:first-child
+  svg {
+  width: 1rem;
+  height: 1rem;
+}
 /* The panel trigger reads as pressed while the panel is open. */
 .excalidraw
   .layer-ui__wrapper__top-right
   [aria-pressed="true"]
   > .sidebar-trigger {
-  background: var(--foreground);
-  color: var(--background);
+  background: var(--lime) !important;
+  color: var(--lime-foreground) !important;
 }
 .excalidraw
   .layer-ui__wrapper__top-right
   [aria-pressed="true"]
   > .sidebar-trigger
-  .rounded-full {
-  background: var(--background);
-  color: var(--foreground);
+  > div:first-child {
+  background: var(--foreground);
+  color: var(--background);
 }
 
 /* ---------- Excalidraw wears our tokens ----------
@@ -469,7 +532,7 @@
   /* selected tool / checked option: a quiet tint, not an inverted pill */
   --color-surface-primary-container: color-mix(
     in oklab,
-    var(--foreground) 12%,
+    var(--lime) 55%,
     transparent
   );
   --color-on-primary-container: var(--foreground);

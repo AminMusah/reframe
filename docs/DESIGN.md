@@ -116,6 +116,24 @@ Four nouns, one verb. Code and model prompts keep the older internal names in pa
 - Any earlier answer can be changed: *Change* on a transcript line re-asks that question; on send, `interviews.rewind` drops that answer and everything after it (briefs included), the client rebases to the current canvas and answers again.
 - From question 5 on, "That's enough — write the brief" is a real button, not a link.
 
+### Design system (2026-09-14)
+
+Drawn from three references the author brought (their portfolio, a warm one-pager, and a set of mobile mockups) — the thread through all of them: **warm ground, near-black ink, one loud lime, fill over outline, big radii, a geometric rounded sans.** Everything is a token in `app/globals.css` (`:root` / `.dark`), and the Excalidraw chrome reads the same tokens.
+
+| Token | Light | Role |
+|---|---|---|
+| `--background` | warm off-white | the canvas ground and panel backdrop |
+| `--card` | white | floating panels, dialogs, the prompt |
+| `--secondary` / `--muted` | warm light grey | tinted surfaces — option rows, inputs; no hairlines |
+| `--foreground` / `--primary` | warm near-black | ink; black pill buttons |
+| `--lime` | #c9f76f-ish | the one accent: Generate prompt disc, badge, selected tool, step numbers, option-key hover |
+| `--lavender` | soft violet | "done for you" — the drawing-change pill with Undo |
+| `--peach` | orange | "needs you" — changing an answer, errors' warmth |
+| `--forest` | deep green | the headline card ("What we settled on") |
+| `--radius` | 1rem | cards 16–29 px; every button is a pill; icon buttons are discs |
+
+Dark mode is forest-black with the same lime; `--primary` becomes lime there so the primary button stays loud. Font: **Outfit** (`--font-sans`), Geist Mono for code. Shadows stay minimal; borders are 8–10 % ink and used only where fill would not separate.
+
 ### Design pass (v1.2)
 
 The canvas is the hero; the panel is one calm conversation. Rules that came out of the pass:

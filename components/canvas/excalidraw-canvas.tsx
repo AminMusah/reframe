@@ -192,11 +192,11 @@ export default function ExcalidrawCanvas({
                 !panelShown &&
                 (isMobile ? (
                   <span
-                    className="absolute top-1 right-1 size-2 rounded-full bg-foreground"
+                    className="absolute top-1 right-1 size-2 rounded-full bg-lime ring-2 ring-background"
                     aria-label={panelBadge}
                   />
                 ) : (
-                  <span className="rounded-full bg-foreground px-1.5 py-0.5 text-[10px] leading-none font-medium text-background">
+                  <span className="rounded-full bg-lime px-1.5 py-0.5 text-[10px] leading-none font-medium text-lime-foreground">
                     {panelBadge}
                   </span>
                 ))}
@@ -221,7 +221,7 @@ export default function ExcalidrawCanvas({
             <span className="flex items-center gap-1.5 font-sans text-sm font-semibold tracking-tight text-foreground">
               <span
                 aria-hidden
-                className="inline-block size-2.5 rounded-[3px] bg-foreground"
+                className="inline-block size-2.5 rounded-[3px] bg-lime"
               />
               Reframe
             </span>
