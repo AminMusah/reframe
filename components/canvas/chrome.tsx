@@ -6,6 +6,7 @@ import {
   Delete02Icon,
   FolderOpenIcon,
   HelpCircleIcon,
+  Flowchart01Icon,
   Image02Icon,
   Key01Icon,
   Login03Icon,
@@ -120,6 +121,16 @@ export function Chrome({
           </MainMenu.Item>
         </MainMenu.Group>
         <MainMenu.Separator />
+        <MainMenu.Item
+          icon={icon(Flowchart01Icon)}
+          onSelect={() =>
+            excalidraw.current?.updateScene({
+              appState: { openDialog: { name: "ttd", tab: "mermaid" } },
+            })
+          }
+        >
+          Diagram from Mermaid…
+        </MainMenu.Item>
         <MainMenu.DefaultItems.SaveAsImage />
         <MainMenu.DefaultItems.SearchMenu />
         <MainMenu.DefaultItems.ClearCanvas />

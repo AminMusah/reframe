@@ -117,6 +117,8 @@ export default function ExcalidrawCanvas({
           onApi?.(api)
         }}
         theme={resolvedTheme === "dark" ? "dark" : "light"}
+        // No Excalidraw AI tab; the Mermaid tab of that dialog is reached from our menu.
+        aiEnabled={false}
         UIOptions={{
           canvasActions: { loadScene: false, saveToActiveFile: false },
         }}

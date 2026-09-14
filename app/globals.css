@@ -474,3 +474,22 @@
   .dropdown-menu-item[data-testid="toolbar-embeddable"] {
   display: none;
 }
+/* The Mermaid dialog is Excalidraw's; only its title and note are reworded. */
+:root .excalidraw .dialog-mermaid-title {
+  font-size: 0;
+}
+:root .excalidraw .dialog-mermaid-title::before {
+  content: "Diagram from Mermaid";
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+:root .excalidraw .ttd-dialog-desc {
+  font-size: 0;
+  font-style: normal;
+}
+:root .excalidraw .ttd-dialog-desc::before {
+  content: "Paste Mermaid text — flowchart, sequence, class or ER diagrams become editable shapes; other kinds become a picture.";
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
