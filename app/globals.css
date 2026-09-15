@@ -54,40 +54,43 @@
 }
 
 /* ---------- Tokens ----------
-   Warm ground, near-black ink, one loud lime, a small pastel family for
-   meaning, big radii; fill over outline — no borders, no shadows.
+   Ink on white, softly. White ground and canvas, near-black ink, lavender-
+   grey surfaces (fill, never outline — no borders, no shadows), ink pill
+   buttons, big radii. There is no accent colour: emphasis is done with ink,
+   meaning with shades of the grey. --brand is what an accent would colour
+   (the Generate prompt pill, AI marks) and currently equals the ink.
    Everything — panels, dialogs and the Excalidraw chrome — reads from these. */
 :root {
-  --background: oklch(0.975 0.006 95); /* warm off-white */
-  --foreground: oklch(0.2 0.01 120); /* warm near-black */
-  --card: oklch(1 0 0); /* white cards on the warm ground */
+  --background: #ffffff;
+  --foreground: #1b1a1e; /* near-black, never pure */
+  --card: #f5f4f7; /* panels, islands, dialogs: a soft lavender-grey */
   --card-foreground: var(--foreground);
-  --popover: oklch(1 0 0);
+  --popover: #f5f4f7;
   --popover-foreground: var(--foreground);
   --primary: var(--foreground);
-  --primary-foreground: oklch(0.985 0.005 95);
-  --secondary: oklch(0.955 0.008 95); /* rows and fields inside a white card */
+  --primary-foreground: #ffffff;
+  --secondary: #ffffff; /* rows and fields inside a grey card */
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.945 0.008 95);
-  --muted-foreground: oklch(0.5 0.015 110);
-  --accent: oklch(0.925 0.012 95); /* hover surface */
+  --muted: #eae8ee;
+  --muted-foreground: #716d77;
+  --accent: #e1dee6; /* hover surface, selected row */
   --accent-foreground: var(--foreground);
-  --destructive: oklch(0.6 0.2 30);
-  --border: transparent; /* fill separates surfaces; no hairlines */
-  --input: oklch(0.955 0.008 95);
-  --ring: oklch(0.86 0.2 125);
-  /* the family */
-  --brand: oklch(0.92 0.2 125); /* lime #c9f76f — the one accent */
-  --brand-foreground: var(--foreground);
-  --lavender: oklch(0.86 0.09 315); /* "done for you" */
-  --peach: oklch(0.78 0.16 45); /* "needs you" */
-  --forest: oklch(0.32 0.06 155); /* the headline card */
-  --forest-foreground: oklch(0.94 0.06 125);
-  --chart-1: var(--brand);
-  --chart-2: var(--lavender);
-  --chart-3: var(--peach);
-  --chart-4: var(--forest);
-  --chart-5: var(--muted-foreground);
+  --destructive: #e5484d; /* the one colour: danger */
+  --border: transparent;
+  --input: #ffffff;
+  --ring: #1b1a1e;
+  --brand: var(--foreground);
+  --brand-foreground: #ffffff;
+  /* meaning, in greys */
+  --lavender: #e1dee6; /* "done for you" */
+  --peach: #cfcbd6; /* "needs you" */
+  --forest: #1b1a1e; /* the headline card */
+  --forest-foreground: #ffffff;
+  --chart-1: #1b1a1e;
+  --chart-2: #716d77;
+  --chart-3: #a7a3ad;
+  --chart-4: #d3d0d9;
+  --chart-5: #eae8ee;
   --radius: 1rem;
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
@@ -100,37 +103,35 @@
 }
 
 .dark {
-  --background: oklch(0.17 0.012 150); /* deep forest-black */
-  --foreground: oklch(0.95 0.01 110);
-  --card: oklch(
-    0.25 0.012 150
-  ); /* a clear step above the ground: no borders to help */
+  --background: #151417;
+  --foreground: #f1eff4;
+  --card: #222126;
   --card-foreground: var(--foreground);
-  --popover: oklch(0.25 0.012 150);
+  --popover: #222126;
   --popover-foreground: var(--foreground);
-  --primary: var(--brand);
-  --primary-foreground: oklch(0.2 0.01 120);
-  --secondary: oklch(0.31 0.012 150);
+  --primary: var(--foreground);
+  --primary-foreground: #151417;
+  --secondary: #2c2b31;
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.31 0.012 150);
-  --muted-foreground: oklch(0.72 0.015 120);
-  --accent: oklch(0.36 0.014 150);
+  --muted: #2c2b31;
+  --muted-foreground: #a7a3ad;
+  --accent: #38363e;
   --accent-foreground: var(--foreground);
-  --destructive: oklch(0.7 0.17 30);
+  --destructive: #f0777b;
   --border: transparent;
-  --input: oklch(0.31 0.012 150);
-  --ring: oklch(0.86 0.2 125);
-  --brand: oklch(0.9 0.2 125);
-  --brand-foreground: oklch(0.2 0.01 120);
-  --lavender: oklch(0.7 0.1 315);
-  --peach: oklch(0.72 0.16 45);
-  --forest: oklch(0.28 0.06 155);
-  --forest-foreground: oklch(0.94 0.06 125);
-  --chart-1: var(--brand);
-  --chart-2: var(--lavender);
-  --chart-3: var(--peach);
-  --chart-4: var(--forest);
-  --chart-5: var(--muted-foreground);
+  --input: #2c2b31;
+  --ring: #f1eff4;
+  --brand: var(--foreground);
+  --brand-foreground: #151417;
+  --lavender: #2c2b31;
+  --peach: #3e3b45;
+  --forest: #f1eff4;
+  --forest-foreground: #151417;
+  --chart-1: #f1eff4;
+  --chart-2: #a7a3ad;
+  --chart-3: #716d77;
+  --chart-4: #3e3b45;
+  --chart-5: #2c2b31;
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
@@ -140,6 +141,7 @@
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
 }
+
 
 @layer base {
   * {
@@ -423,8 +425,8 @@
   .layer-ui__wrapper__top-right
   [title^="A short interview"]
   > .sidebar-trigger {
-  background: var(--foreground);
-  color: var(--background);
+  background: var(--brand);
+  color: var(--brand-foreground);
   padding-inline-start: 0.35rem;
 }
 .excalidraw
@@ -437,8 +439,8 @@
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 9999px;
-  background: var(--brand);
-  color: var(--brand-foreground);
+  background: var(--brand-foreground);
+  color: var(--brand);
 }
 .excalidraw
   .layer-ui__wrapper__top-right
@@ -454,16 +456,16 @@
   .layer-ui__wrapper__top-right
   [aria-pressed="true"]
   > .sidebar-trigger {
-  background: var(--brand) !important;
-  color: var(--brand-foreground) !important;
+  background: var(--card) !important;
+  color: var(--foreground) !important;
 }
 .excalidraw
   .layer-ui__wrapper__top-right
   [aria-pressed="true"]
   > .sidebar-trigger
   > div:first-child {
-  background: var(--foreground);
-  color: var(--background);
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 /* ---------- Excalidraw wears our tokens ----------
@@ -500,8 +502,8 @@
   --color-muted-background: var(--muted);
   --color-muted-background-darker: var(--accent);
   --keybinding-color: var(--muted-foreground);
-  --link-color: var(--foreground);
-  --link-color-hover: var(--foreground);
+  --link-color: var(--brand);
+  --link-color-hover: var(--brand);
 
   /* borders, radius, shadow */
   --default-border-color: var(--border);
@@ -520,22 +522,22 @@
   --sidebar-shadow: var(--shadow-island-stronger);
   --modal-shadow: var(--shadow-island-stronger);
 
-  /* the accent: neutral instead of purple */
-  --color-primary: var(--foreground);
-  --color-primary-darker: var(--foreground);
-  --color-primary-darkest: var(--foreground);
-  --color-primary-hover: var(--foreground);
-  --color-brand-active: var(--foreground);
-  --color-brand-hover: var(--foreground);
+  /* the accent: ours instead of Excalidraw purple */
+  --color-primary: var(--brand);
+  --color-primary-darker: var(--brand);
+  --color-primary-darkest: var(--brand);
+  --color-primary-hover: var(--brand);
+  --color-brand-active: var(--brand);
+  --color-brand-hover: var(--brand);
   --color-primary-light: var(--accent);
   --color-primary-light-darker: var(--accent);
   /* selected tool / checked option: a quiet tint, not an inverted pill */
   --color-surface-primary-container: color-mix(
     in oklab,
-    var(--brand) 55%,
+    var(--brand) 14%,
     transparent
   );
-  --color-on-primary-container: var(--foreground);
+  --color-on-primary-container: var(--brand);
   --button-hover-bg: var(--accent);
   --button-active-bg: var(--accent);
   --button-active-border: var(--foreground);

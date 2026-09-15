@@ -617,7 +617,7 @@ export function InterviewPanel({
       </div>
 
       {idle && needsKey && (
-        <div className="enter border-t px-5 py-4">
+        <div className="enter px-5 py-4">
           <KeyForm
             rejected={interview?.lastError === "bad_key"}
             onSave={setApiKey}
@@ -626,7 +626,7 @@ export function InterviewPanel({
       )}
 
       {!interview && !needsKey && (
-        <div className="space-y-2 border-t px-5 py-4">
+        <div className="space-y-2 px-5 py-4">
           <Button
             size="lg"
             className="w-full"
@@ -672,7 +672,7 @@ function Card({
   return (
     <div
       className={cn(
-        "rounded-xl border bg-card p-4 text-sm text-card-foreground shadow-xs",
+        "rounded-xl bg-secondary p-4 text-sm text-card-foreground",
         className
       )}
     >
@@ -826,7 +826,7 @@ function Transcript({
         <span>{open ? "Hide" : "Show"}</span>
       </button>
       {shown && (
-        <ol className="enter space-y-3 border-l pl-3 text-sm">
+        <ol className="enter space-y-3 rounded-xl bg-secondary p-3 text-sm">
           {settled.map((t, i) => (
             <li key={i} className={cn(editing === i && "opacity-50")}>
               {t.role === "user" ? (

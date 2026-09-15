@@ -116,23 +116,25 @@ Four nouns, one verb. Code and model prompts keep the older internal names in pa
 - Any earlier answer can be changed: *Change* on a transcript line re-asks that question; on send, `interviews.rewind` drops that answer and everything after it (briefs included), the client rebases to the current canvas and answers again.
 - From question 5 on, "That's enough — write the brief" is a real button, not a link.
 
-### Design system (2026-09-14)
+### Design system (2026-09-15)
 
-Drawn from three references the author brought (their portfolio, a warm one-pager, and a set of mobile mockups) — the thread through all of them: **warm ground, near-black ink, one loud lime, fill over outline (no borders, no shadows), big radii, a geometric rounded sans.** Everything is a token in `app/globals.css` (`:root` / `.dark`), and the Excalidraw chrome reads the same tokens.
+**Ink on white, softly.** White ground and canvas, near-black ink, lavender-grey surfaces, fill over outline (no borders, no shadows), pill buttons, big radii, a geometric rounded sans (**Outfit**, Geist Mono for code). There is no accent colour: emphasis is ink, meaning is shades of the one grey. Everything is a token in `app/globals.css` (`:root` / `.dark`), and the Excalidraw chrome reads the same tokens.
 
 | Token | Light | Role |
 |---|---|---|
-| `--background` | warm off-white | the ground — the canvas is painted it too (`viewBackgroundColor #f7f7f2`) so white cards read with no edge |
-| `--card` | white | floating panels, islands, dialogs, the prompt |
-| `--secondary` / `--muted` / `--accent` | warm light greys | rows and fields inside a card; hover |
-| `--foreground` / `--primary` | warm near-black | ink; black pill buttons (default 40 px tall) |
-| `--brand` | lime `#c9f76f` | the one accent: Generate prompt disc (lime pill while open), badge, selected tool, step numbers, option-key hover |
-| `--lavender` | soft violet | "done for you" — the drawing-change pill with Undo |
-| `--peach` | orange | "needs you" — drawing changed, changing an answer |
-| `--forest` | deep green | the headline card ("What we settled on") |
+| `--background` | white | the ground; the canvas is white too (`viewBackgroundColor #ffffff`) |
+| `--card` / `--popover` | `#f5f4f7` | floating panels, islands, dialogs |
+| `--secondary` / `--input` | white | rows and fields inside a panel |
+| `--muted` / `--accent` | `#eae8ee` / `#e1dee6` | secondary surface; hover and the selected row |
+| `--foreground` / `--primary` | `#1b1a1e` | ink; ink pill buttons (default 40 px tall) |
+| `--muted-foreground` | `#716d77` | secondary text |
+| `--brand` | = ink | where an accent would go: the Generate prompt pill and disc, badge, brand square, step numbers, Excalidraw's selected tool and links. Kept as its own token so an accent can be tried by changing one value |
+| `--lavender` / `--peach` | `#e1dee6` / `#cfcbd6` | "done for you" (drawing-change pill) / "needs you" (drawing changed, changing an answer) |
+| `--forest` | = ink | the headline card ("What we settled on") |
+| `--destructive` | `#e5484d` | the only colour: delete, clear, errors |
 | `--radius` | 1rem | cards 16–29 px; every button a pill; icon buttons discs |
 
-Dark mode is forest-black with the same lime; `--primary` becomes lime there so the main action stays loud; surfaces sit a clear step above the ground because nothing else separates them. Font **Outfit**, Geist Mono for code. Also tried and rejected: olive `#5d7e08` on the warm ground, cobalt on white, and the author's navy/slate/mist/frost palette on white — the lime system was the one that stuck.
+Dark mode is the same ladder inverted (`#151417` ground, `#222126` panels, `#2c2b31` rows, `#f1eff4` ink). Tried and rejected on the way here: lime, olive and cobalt accents on a warm ground; the author's navy/slate palette; the birthday-site pastels; pure black and white; five cool/warm neutral greys and five white-plus-one-accent sets (cobalt, violet, orange, teal, electric blue). The lavender-grey neutral won for keeping the canvas quiet; the accent question stays open and would land on `--brand` alone.
 
 ### Design pass (v1.2)
 

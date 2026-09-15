@@ -22,10 +22,10 @@ import { loadScene } from "./load-scene"
 
 export const PANEL = "reframe"
 /**
- * The canvas is the app's warm ground, so white cards read as cards with no
+ * The canvas is the app's white ground; the grey panels float on it with no
  * border or shadow. Excalidraw inverts it itself in dark mode.
  */
-const CANVAS_BG = "#f7f7f2"
+const CANVAS_BG = "#ffffff"
 const DRAWINGS = "drawings"
 
 export type CanvasProps = {
@@ -205,7 +205,7 @@ export default function ExcalidrawCanvas({
                     aria-label={panelBadge}
                   />
                 ) : (
-                  <span className="rounded-full bg-brand px-1.5 py-0.5 text-[10px] leading-none font-medium text-brand-foreground">
+                  <span className="rounded-full bg-brand-foreground px-1.5 py-0.5 text-[10px] leading-none font-medium text-brand">
                     {panelBadge}
                   </span>
                 ))}

@@ -85,12 +85,12 @@ export function BriefView({
         </div>
       ) : (
         <>
-          <div className="brief rounded-xl border bg-card px-4 py-3 text-sm shadow-xs">
+          <div className="brief rounded-xl bg-secondary px-4 py-3 text-sm">
             <Markdown>{brief.text}</Markdown>
             {brief.status === "streaming" && <span className="caret" />}
           </div>
           {/* Stays in reach however long the prompt runs; the panel scrolls behind it. */}
-          <div className="sticky -bottom-5 -mx-5 -mb-5 flex items-center justify-between gap-2 border-t bg-background/90 px-5 py-3 backdrop-blur">
+          <div className="sticky -bottom-5 -mx-5 -mb-5 flex items-center justify-between gap-2 bg-card/90 px-5 py-3 backdrop-blur">
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
               {brief.status === "streaming" && <Spinner className="size-3" />}
               {brief.status === "streaming"

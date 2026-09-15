@@ -113,7 +113,7 @@ export function DrawingsList({
           ))}
         </ul>
       </div>
-      <div className="space-y-2 border-t px-5 py-4">
+      <div className="space-y-2 px-5 py-4">
         {createError && (
           <p className="text-xs text-destructive">{createError}</p>
         )}
