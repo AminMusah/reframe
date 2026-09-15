@@ -2,7 +2,6 @@ import { Analytics } from "@vercel/analytics/next"
 import { Geist_Mono, Outfit } from "next/font/google"
 
 import "./globals.css"
-import { Providers } from "@/components/providers"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 
@@ -33,7 +32,7 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <Providers>{children}</Providers>
+          {children}
           <Analytics />
         </ThemeProvider>
       </body>
