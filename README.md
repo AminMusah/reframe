@@ -37,6 +37,7 @@ When the interviewer edits the drawing, a tidy pass makes room (and lays the who
 | `pnpm dump-graph fixtures/x.excalidraw` | Print what the model sees for a drawing |
 | `pnpm eval [fixture] [--brief]` | Interview evals: simulated author + judge (needs `ANTHROPIC_API_KEY` in env or `.env.local`) |
 | `pnpm build` | Static export to `out/` |
+| `npx convex run stats:summary --prod` | Product numbers: owners, drawings, interviews by status/model/language, prompts. Page views are in Vercel → Analytics. |
 
 ## Sign-in with GitHub / Google (optional)
 

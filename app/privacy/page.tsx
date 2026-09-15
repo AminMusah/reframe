@@ -2,7 +2,7 @@ import Link from "next/link"
 
 export const metadata = { title: "Privacy · Reframe" }
 
-const UPDATED = "13 September 2026"
+const UPDATED = "15 September 2026"
 
 /** Plain-language privacy policy; also the URL Google's OAuth branding requires. */
 export default function PrivacyPage() {
@@ -61,8 +61,17 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="Cookies and analytics">
-        A session token in your browser keeps you signed in. There are no
-        advertising trackers and no third-party analytics.
+        A session token in your browser keeps you signed in. Page views are
+        counted with{" "}
+        <a
+          href="https://vercel.com/docs/analytics/privacy-policy"
+          className="underline"
+        >
+          Vercel Web Analytics
+        </a>
+        , which sets no cookies and does not track you across sites; it records
+        the page, the referrer and a coarse device and country, never who you
+        are or what you drew. There are no advertising trackers.
       </Section>
 
       <Section title="Deleting your data">

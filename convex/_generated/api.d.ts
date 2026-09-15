@@ -17,6 +17,7 @@ import type * as interviewActions from "../interviewActions.js";
 import type * as interviews from "../interviews.js";
 import type * as projects from "../projects.js";
 import type * as sketchActions from "../sketchActions.js";
+import type * as stats from "../stats.js";
 import type * as users from "../users.js";
 
 import type {
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   interviews: typeof interviews;
   projects: typeof projects;
   sketchActions: typeof sketchActions;
+  stats: typeof stats;
   users: typeof users;
 }>;
 
