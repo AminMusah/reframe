@@ -175,4 +175,11 @@ export default defineSchema({
   })
     .index("by_interview_and_createdAt", ["interviewId", "createdAt"])
     .index("by_ownerId", ["ownerId"]),
+
+  // An anonymous user's claim on their work across an OAuth sign-in (see users.ts).
+  pendingLinks: defineTable({
+    token: v.string(),
+    fromUserId: v.string(),
+    expiresAt: v.number(),
+  }).index("by_token", ["token"]),
 })

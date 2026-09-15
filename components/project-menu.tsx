@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
+import { useGoHome } from "@/hooks/use-go-home"
 import { clearMirror } from "@/lib/scene-store"
 import { cn } from "@/lib/utils"
 
@@ -35,6 +36,7 @@ export function DrawingsList({
   onClose: () => void
 }) {
   const router = useRouter()
+  const goHome = useGoHome()
   const projects = useQuery(api.projects.list)
   const create = useMutation(api.projects.create)
   const remove = useMutation(api.projects.remove)
@@ -84,7 +86,7 @@ export function DrawingsList({
                       setConfirmId(null)
                       if (p._id === currentId) {
                         onClose()
-                        router.replace("/")
+                        await goHome()
                       }
                     }}
                   >

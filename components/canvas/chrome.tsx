@@ -23,7 +23,6 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery } from "convex/react"
 import { useTheme } from "next-themes"
-import { useRouter } from "next/navigation"
 import * as React from "react"
 
 import { HelpDialog } from "@/components/help-dialog"
@@ -46,6 +45,7 @@ import { authClient } from "@/lib/auth-client"
 import { useApiKey } from "@/lib/llm-settings"
 import { layoutScene } from "@/lib/edits/layout"
 import { measureText } from "@/lib/edits/apply"
+import { useGoHome } from "@/hooks/use-go-home"
 import { clearMirror } from "@/lib/scene-store"
 
 const icon = (i: typeof Key01Icon) => (
@@ -74,7 +74,7 @@ export function Chrome({
   setDialog: (d: ChromeDialog) => void
   onLoadExample: () => void
 }) {
-  const router = useRouter()
+  const goHome = useGoHome()
   const { resolvedTheme, setTheme } = useTheme()
   const [apiKey] = useApiKey()
   const user = useQuery(api.auth.getCurrentUser)
@@ -102,7 +102,7 @@ export function Chrome({
   const deleteProject = async () => {
     await remove({ id: projectId })
     clearMirror(projectId)
-    router.replace("/")
+    await goHome()
   }
 
   return (

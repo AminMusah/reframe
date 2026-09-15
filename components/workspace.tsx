@@ -1,8 +1,8 @@
 "use client"
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types"
-import { useMutation, useQuery } from "convex/react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useQuery } from "convex/react"
+import { useSearchParams } from "next/navigation"
 import * as React from "react"
 
 import { Canvas } from "@/components/canvas"
@@ -11,24 +11,24 @@ import { Button } from "@/components/ui/button"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import type { SaveStatus } from "@/hooks/use-autosave"
+import { useGoHome } from "@/hooks/use-go-home"
 import type { SerializedScene } from "@/lib/serializer"
 import { cn } from "@/lib/utils"
 
 export function Workspace() {
   const params = useSearchParams()
-  const router = useRouter()
   const projectId = params.get("p") as Id<"projects"> | null
-  const openMostRecent = useMutation(api.projects.openMostRecent)
+  const goHome = useGoHome()
 
   // `/` without a project: open the most recent one (creating it if needed).
   React.useEffect(() => {
     if (projectId) return
-    void openMostRecent().then((id) => router.replace(`/?p=${id}`))
-  }, [openMostRecent, projectId, router])
+    void goHome()
+  }, [goHome, projectId])
 
   if (!projectId) return null
   return (
-    <ProjectErrorBoundary key={projectId} onReset={() => router.replace("/")}>
+    <ProjectErrorBoundary key={projectId} onReset={goHome}>
       <Project projectId={projectId} />
     </ProjectErrorBoundary>
   )
@@ -39,13 +39,13 @@ export function Workspace() {
  * interview panel all live in Excalidraw's own slots (see canvas/chrome.tsx).
  */
 function Project({ projectId }: { projectId: Id<"projects"> }) {
-  const router = useRouter()
+  const goHome = useGoHome()
   const project = useQuery(api.projects.get, { id: projectId })
   const interview = useQuery(api.interviews.latestForProject, { projectId })
   // Deleted, or a link to someone else's drawing: go to the latest one.
   React.useEffect(() => {
-    if (project === null) router.replace("/")
-  }, [project, router])
+    if (project === null) void goHome()
+  }, [project, goHome])
   const [status, setStatus] = React.useState<SaveStatus>("idle")
   const [scene, setScene] = React.useState<SerializedScene | null>(null)
   const [sceneHash, setSceneHash] = React.useState<string | null>(null)

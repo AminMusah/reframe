@@ -1,8 +1,9 @@
 "use client"
 
-import { useQuery } from "convex/react"
+import { useMutation, useQuery } from "convex/react"
 import * as React from "react"
 
+import { GitHubMark, GoogleMark } from "@/components/provider-logos"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -12,9 +13,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { api } from "@/convex/_generated/api"
+import { Spinner } from "@/components/ui/spinner"
 import { authClient } from "@/lib/auth-client"
+import { cn } from "@/lib/utils"
+import { PENDING_LINK_KEY } from "@/lib/pending-link"
 
-const LABEL: Record<string, string> = { github: "GitHub", google: "Google" }
+/** Each provider's brand: its mark and its button colours. */
+const BRAND: Record<
+  string,
+  { label: string; className: string; mark: React.ReactNode }
+> = {
+  github: {
+    label: "GitHub",
+    className: "bg-[#24292f] text-white hover:bg-[#24292f]/90",
+    mark: <GitHubMark className="size-5" />,
+  },
+  google: {
+    label: "Google",
+    className: "bg-white text-[#1f1f1f] hover:bg-white/90 dark:bg-white",
+    mark: <GoogleMark className="size-5" />,
+  },
+}
 
 /**
  * Anonymous visitors can upgrade to a GitHub/Google account; their projects
@@ -28,6 +47,7 @@ export function SignInDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const providers = useQuery(api.auth.providers)
+  const prepareLink = useMutation(api.users.prepareLink)
   const [busy, setBusy] = React.useState<string | null>(null)
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,11 +63,18 @@ export function SignInDialog({
           {providers?.map((provider) => (
             <Button
               key={provider}
-              variant="outline"
+              size="lg"
+              className={cn("w-full", BRAND[provider]?.className)}
               disabled={busy !== null}
               onClick={async () => {
                 setBusy(provider)
                 try {
+                  // Carry this anonymous user's work across the redirect
+                  // (redeemed in Providers once the new session is in).
+                  const token = await prepareLink()
+                  try {
+                    localStorage.setItem(PENDING_LINK_KEY, token)
+                  } catch {}
                   await authClient.signIn.social({
                     provider: provider as "github" | "google",
                     callbackURL: window.location.href,
@@ -57,7 +84,14 @@ export function SignInDialog({
                 }
               }}
             >
-              Continue with {LABEL[provider] ?? provider}
+              {busy === provider ? (
+                <Spinner />
+              ) : (
+                <>
+                  {BRAND[provider]?.mark}
+                  Continue with {BRAND[provider]?.label ?? provider}
+                </>
+              )}
             </Button>
           ))}
         </div>
