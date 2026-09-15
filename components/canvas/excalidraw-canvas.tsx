@@ -189,8 +189,9 @@ export default function ExcalidrawCanvas({
                 <HugeiconsIcon icon={FolderOpenIcon} strokeWidth={2} />
               ) : (
                 // Excalidraw's trigger is a flex box with line-height 0; the
-                // ellipsis needs a block child with a line height of its own.
-                <span className="min-w-0 truncate leading-none">
+                // ellipsis needs a block child with a line height of its own — a
+                // normal one, or overflow:hidden clips the descenders.
+                <span className="min-w-0 truncate leading-normal">
                   {project.name}
                 </span>
               )}
