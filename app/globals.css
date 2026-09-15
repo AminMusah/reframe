@@ -150,6 +150,24 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Everything clickable says so — ours and Excalidraw's. (Tailwind 4 and
+     Excalidraw both leave buttons on the default arrow.) */
+  button,
+  [role="button"],
+  [role="menuitem"],
+  [role="option"],
+  [role="tab"],
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]),
+  select,
+  summary,
+  a[href] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: default;
+  }
   html {
     @apply font-sans;
   }
