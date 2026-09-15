@@ -16,7 +16,7 @@ const measure: Measure = (text, fontSize) => {
   }
 }
 
-type El = { -readonly [K in keyof ExcalidrawElement]: ExcalidrawElement[K] }
+type El = Parameters<typeof layoutScene>[0][number]
 
 // A sign-up flow after several agent edits: arrows through boxes, labels on
 // shapes, a box dropped onto an arrow.
