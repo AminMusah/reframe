@@ -56,7 +56,9 @@ export function tidy(
   changedIds: Set<string>,
   measure: Measure,
   /** Which way an added box was placed; pushes from it go that way. */
-  seeds: Map<string, { dx: number; dy: number }> = new Map()
+  seeds: Map<string, { dx: number; dy: number }> = new Map(),
+  /** Boxes the edit moves, with where to: applied here so their arrows follow. */
+  moves: Map<string, { x: number; y: number }> = new Map()
 ): void {
   const live = elements.filter((e) => !e.isDeleted)
   const byId = new Map(live.map((e) => [e.id, e]))
@@ -109,6 +111,10 @@ export function tidy(
     moved.add(el.id)
   }
   const before = new Map(shapes.map((s) => [s.id, box(s)]))
+  for (const [id, to] of moves) {
+    const el = byId.get(id)
+    if (el) nudge(el, to.x - el.x, to.y - el.y)
+  }
   // Boxes step 1 sized for their label: neighbours make room for them, not
   // the other way round.
   const resized = new Set<string>()

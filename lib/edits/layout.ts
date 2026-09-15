@@ -95,6 +95,46 @@ export function audit(elements: readonly ExcalidrawElement[]): Problem[] {
 }
 
 /**
+ * The audit's findings in words for the model, using the graph's short ids
+ * (`idMap` is short → Excalidraw id, from the serializer). Empty when clean.
+ */
+export function describeProblems(
+  elements: readonly ExcalidrawElement[],
+  idMap: Record<string, string>
+): string[] {
+  const short = new Map(Object.entries(idMap).map(([k, v]) => [v, k]))
+  const byId = new Map(elements.map((e) => [e.id, e]))
+  const name = (id: string) => {
+    const el = byId.get(id)
+    const sid =
+      short.get(id) ??
+      (el?.type === "text"
+        ? short.get((el as Text).containerId ?? "")
+        : undefined)
+    const label =
+      el?.type === "text"
+        ? (el as Text).text
+        : (
+            byId.get(
+              el?.boundElements?.find((b) => b.type === "text")?.id ?? ""
+            ) as Text | undefined
+          )?.text
+    const quoted = label ? ` "${label.replace(/\n/g, " ")}"` : ""
+    return `${sid ?? el?.type ?? id}${quoted}`
+  }
+  return audit(elements).map((p) => {
+    switch (p.kind) {
+      case "overlap":
+        return `${name(p.a)} overlaps ${name(p.b)}`
+      case "arrow-through":
+        return `arrow ${name(p.arrow)} runs through ${name(p.box)}`
+      case "label-over":
+        return `the label ${name(p.label)} sits on ${name(p.box)}`
+    }
+  })
+}
+
+/**
  * Lay the drawing out again. Boxes keep their sizes; the flow keeps its
  * direction (down or right, whichever the arrows mostly do); the whole thing
  * keeps its top-left corner, so free text such as a title stays where it was

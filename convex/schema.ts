@@ -40,7 +40,20 @@ export const editOp = v.union(
     bidirectional: v.boolean(),
   }),
   v.object({ op: v.literal("update"), id: idRef, label: v.string() }),
-  v.object({ op: v.literal("delete"), id: idRef })
+  v.object({ op: v.literal("delete"), id: idRef }),
+  v.object({
+    op: v.literal("move"),
+    id: idRef,
+    place: v.object({
+      relative: v.union(
+        v.literal("right"),
+        v.literal("left"),
+        v.literal("above"),
+        v.literal("below")
+      ),
+      of: idRef,
+    }),
+  })
 )
 
 export const questionTurn = v.object({

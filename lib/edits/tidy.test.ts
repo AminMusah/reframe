@@ -279,3 +279,32 @@ describe("tidy", () => {
     expect(JSON.stringify(els)).toBe(snapshot)
   })
 })
+
+describe("tidy with moves", () => {
+  it("moves a box where the edit asks, its label and arrow with it", () => {
+    const [a, at] = shape("a", 0, 0, 160, 80, "A")
+    const [b, bt] = shape("b", 300, 0, 160, 80, "B")
+    const [c, ct] = shape("c", 0, 300, 160, 80, "C")
+    const ab = arrow("ab", a, b)
+    const els = [a, at, b, bt, c, ct, ...ab]
+    // Put B below A instead of beside it.
+    tidy(
+      els as unknown as Parameters<typeof tidy>[0],
+      new Set(["b"]),
+      measure,
+      new Map([["b", { dx: 0, dy: 1 }]]),
+      new Map([["b", { x: 0, y: 108 }]])
+    )
+    expect(b.x).toBe(0)
+    expect(b.y).toBe(108)
+    // The label went along, and the arrow now leaves A's bottom for B's top.
+    expect(bt.x).toBe(10)
+    expect(bt.y).toBe(118)
+    const arr = ab[0]
+    const start = { x: arr.x as number, y: arr.y as number }
+    expect(start.y).toBeCloseTo(80, 0)
+    expect((arr.startBinding as { fixedPoint: number[] }).fixedPoint[1]).toBe(1)
+    // C, which sat where B landed near, is pushed further down, not overlapped.
+    expect((c.y as number) >= 108 + 80).toBe(true)
+  })
+})

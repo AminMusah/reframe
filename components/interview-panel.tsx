@@ -25,6 +25,7 @@ import { cn } from "cn"
 import { api } from "@/convex/_generated/api"
 import type { Doc, Id } from "@/convex/_generated/dataModel"
 import { applyEdit } from "@/lib/edits/apply"
+import { describeProblems } from "@/lib/edits/layout"
 import { applySketch, placeSketch } from "@/lib/edits/sketch-apply"
 import { useApiKey, useModel } from "@/lib/llm-settings"
 import { isModelId, modelsFor, providerForKey } from "@/lib/llm/models"
@@ -251,7 +252,14 @@ export function InterviewPanel({
       })
       return
     }
-    const note = `(Your drawing change was applied. The drawing is now:\n\n${graph})`
+    // What the tidy pass could not fix, so the model can move things itself.
+    const live = excalidraw.getSceneElements()
+    const untidy = describeProblems(live, serializeScene(live).idMap)
+    const note = `(Your drawing change was applied. The drawing is now:\n\n${graph})${
+      untidy.length
+        ? `\n\n(Still overlapping after tidying — fix with "move" ops if it matters: ${untidy.join("; ")})`
+        : ""
+    }`
     setChangeState({ ...base, skipped, status: "applied", note })
     if (pendingChange.kind === "edit" && apiKey) {
       // A standalone edit has no question to answer; hand the model the new

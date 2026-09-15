@@ -77,6 +77,14 @@ export const editOpSchema = z.union([
   }),
   z.object({ op: z.literal("update"), id: idRef, label: z.string().min(1) }),
   z.object({ op: z.literal("delete"), id: idRef }),
+  z.object({
+    op: z.literal("move"),
+    id: idRef,
+    place: z.object({
+      relative: z.enum(["right", "left", "above", "below"]),
+      of: idRef,
+    }),
+  }),
 ])
 
 /** A question may carry a drawing change the answer before it called for. */
@@ -256,7 +264,7 @@ Ask one question per turn. Each question:
 
 Do not ask about things the drawing already makes clear, and do not ask about visual styling unless the drawing implies it matters. Prefer questions whose answer changes what gets built. Treat free-text answers as authoritative, even when they contradict the drawing; if an answer implies the drawing should change, note it and keep going. If the author asks you for suggestions, offer them as the options of one question and then move on — do not keep consulting on the same point.
 
-The drawing is the living spec: keep it in step with what the author tells you. Whenever an answer changes what the drawing states — a label, a connection, a component that should exist or should not, where a flow goes — attach the change to your next question as "ops" with a one-line "change" note, and ask the question. The client applies the change immediately (the author can undo it) and your next reply will carry the updated graph with new ids. Examples: the drawing says Firebase does auth and storage and the author says storage only → relabel those arrows; the author names a component the drawing lacks → add it and connect it; the author says media goes through the backend → delete the direct arrows and connect via the backend. Do not change the drawing for answers that only add detail the drawing never claimed, and never for tidying, styling, or annotations. Ops are coarse — add, connect, rename, delete, relative placement — and cannot control spacing or match a picture. When a change replaces something, delete what it replaces in the same ops. When the author explicitly asks for a change and you have no question to pair it with, return kind "edit" (text + ops) on its own; it is applied the same way.
+The drawing is the living spec: keep it in step with what the author tells you. Whenever an answer changes what the drawing states — a label, a connection, a component that should exist or should not, where a flow goes — attach the change to your next question as "ops" with a one-line "change" note, and ask the question. The client applies the change immediately (the author can undo it) and your next reply will carry the updated graph with new ids. Examples: the drawing says Firebase does auth and storage and the author says storage only → relabel those arrows; the author names a component the drawing lacks → add it and connect it; the author says media goes through the backend → delete the direct arrows and connect via the backend. Do not change the drawing for answers that only add detail the drawing never claimed, and never for tidying, styling, or annotations. Ops are coarse — add, connect, rename, delete, move (next to another shape), relative placement — and cannot control spacing or match a picture. The client tidies the drawing after every change; if something is still overlapping afterwards the reply says so, and a "move" op is the way to fix it. When a change replaces something, delete what it replaces in the same ops. When the author explicitly asks for a change and you have no question to pair it with, return kind "edit" (text + ops) on its own; it is applied the same way.
 
 When the drawing contains a picture of a diagram (a screenshot, a photo of a whiteboard), the author usually wants it as editable shapes — but ask first, do not assume. If the canvas is essentially just that picture, make your first question about it, with options such as "Redraw it as editable shapes so we can work on it", "Interview me from the picture as it is", and a third if sensible. Only when the author picks the redraw (or asks for it in their own words) return kind "sketch" instead of a question: the client redraws the picture with real layout and the author accepts or undoes it. Put in "instruction" what to reproduce or leave out; use mode "replace" when the existing shapes are earlier attempts at the same diagram, "add" otherwise. Never try to reproduce a picture with edit ops. After an accepted sketch the reply carries the new graph; continue the interview about the sketched diagram.
 
@@ -421,6 +429,15 @@ export function validateOps(ops: EditOp[], valid: Set<string>): EditOp[] {
       case "update":
       case "delete":
         if (!known.has(op.id)) continue
+        kept.push(op)
+        break
+      case "move":
+        if (
+          !known.has(op.id) ||
+          !known.has(op.place.of) ||
+          op.id === op.place.of
+        )
+          continue
         kept.push(op)
         break
     }

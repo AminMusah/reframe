@@ -54,6 +54,7 @@ export function applyEdit(input: ApplyInput): ApplyResult {
   const skipped: string[] = []
   // Which way each added box was placed, so the tidy pass pushes neighbours that way.
   const seeds = new Map<string, { dx: number; dy: number }>()
+  const moves = new Map<string, { x: number; y: number }>()
 
   const touch = (el: Mutable<ExcalidrawElement>) => {
     el.version += 1
@@ -142,6 +143,27 @@ export function applyEdit(input: ApplyInput): ApplyResult {
         }
         added.push(...created)
         for (const el of created) changed.add(el.id)
+        break
+      }
+      case "move": {
+        const target = resolve(op.id)
+        const anchor = resolve(op.place.of)
+        const el = target && byId.get(target.id)
+        if (!el || !anchor) {
+          skipped.push(`move ${op.id}: element not found`)
+          break
+        }
+        if (isLinear(el) || el.type === "frame" || el.type === "magicframe") {
+          skipped.push(`move ${op.id}: only shapes and text can be moved`)
+          break
+        }
+        const spot = placeNextTo(anchor.box, op.place.relative, {
+          w: el.width,
+          h: el.height,
+        })
+        moves.set(el.id, { x: spot.x, y: spot.y })
+        seeds.set(el.id, DIRECTION[op.place.relative])
+        touch(el)
         break
       }
       case "update": {
@@ -273,7 +295,7 @@ export function applyEdit(input: ApplyInput): ApplyResult {
   // Breathing room: size boxes for their labels, push neighbours, route arrows.
   const all = [...byId.values(), ...added]
   const measure = input.measure ?? measureText
-  tidy(all, changed, measure, seeds)
+  tidy(all, changed, measure, seeds, moves)
   // Check the work: if arrows still cut through boxes or labels sit on
   // shapes, lay the whole drawing out again rather than leave it messy.
   let relaid = false
@@ -342,9 +364,13 @@ const DIRECTION: Record<Relative, { dx: number; dy: number }> = {
  * the way by the tidy pass, in the same direction — so "below X" inserts a
  * row rather than skipping to the bottom of the drawing.
  */
-function placeNextTo(of: Box, relative: Relative): Box {
-  const w = Math.min(Math.max(of.w, 120), 260)
-  const h = Math.min(Math.max(of.h, 50), 120)
+function placeNextTo(
+  of: Box,
+  relative: Relative,
+  size?: { w: number; h: number }
+): Box {
+  const w = size?.w ?? Math.min(Math.max(of.w, 120), 260)
+  const h = size?.h ?? Math.min(Math.max(of.h, 50), 120)
   if (relative === "inside") {
     const iw = Math.max(100, Math.min(of.w * 0.6, DEFAULT_W))
     const ih = Math.max(40, Math.min(of.h * 0.35, DEFAULT_H))
@@ -478,5 +504,7 @@ export function describeOp(op: EditOp): string {
       return `Rename ${op.id} to "${op.label}"`
     case "delete":
       return `Delete ${op.id}`
+    case "move":
+      return `Move ${op.id} ${op.place.relative} of ${op.place.of}`
   }
 }
