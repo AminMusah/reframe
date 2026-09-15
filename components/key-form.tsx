@@ -76,7 +76,7 @@ export function KeyForm({
           ) : null}
         </p>
       </div>
-      <Button type="submit" size="sm" disabled={!value.trim()}>
+      <Button type="submit" disabled={!value.trim()}>
         Save key
       </Button>
     </form>
