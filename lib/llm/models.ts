@@ -9,6 +9,12 @@ export const PROVIDER_LABEL: Record<Provider, string> = {
 
 export const MODELS = [
   {
+    id: "claude-fable-5-1",
+    label: "Fable 5.1",
+    provider: "anthropic",
+    vision: true,
+  },
+  {
     id: "claude-sonnet-5",
     label: "Sonnet 5",
     provider: "anthropic",
@@ -21,6 +27,7 @@ export const MODELS = [
     provider: "anthropic",
     vision: true,
   },
+  { id: "gpt-6-astra", label: "GPT-6 Astra", provider: "openai", vision: true },
   {
     id: "gpt-5.6-terra",
     label: "GPT-5.6 Terra",
@@ -50,6 +57,18 @@ export const MODELS = [
     id: "gemini-3.5-flash-lite",
     label: "Gemini 3.5 Flash Lite",
     provider: "google",
+    vision: true,
+  },
+  {
+    id: "anthropic/claude-fable-5.1",
+    label: "Fable 5.1 (OpenRouter)",
+    provider: "openrouter",
+    vision: true,
+  },
+  {
+    id: "openai/gpt-6-astra",
+    label: "GPT-6 Astra (OpenRouter)",
+    provider: "openrouter",
     vision: true,
   },
   {
