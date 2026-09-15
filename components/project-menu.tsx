@@ -1,6 +1,6 @@
 "use client"
 
-import { Delete02Icon } from "@hugeicons/core-free-icons"
+import { Delete02Icon, PencilEdit02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery } from "convex/react"
 import { ConvexError } from "convex/values"
@@ -28,11 +28,9 @@ import { cn } from "@/lib/utils"
  */
 export function DrawingsList({
   currentId,
-  currentName,
   onClose,
 }: {
   currentId: Id<"projects">
-  currentName: string
   onClose: () => void
 }) {
   const router = useRouter()
@@ -40,9 +38,12 @@ export function DrawingsList({
   const projects = useQuery(api.projects.list)
   const create = useMutation(api.projects.create)
   const remove = useMutation(api.projects.remove)
-  const rename = useMutation(api.projects.rename)
   const [createError, setCreateError] = React.useState<string | null>(null)
   const [confirmId, setConfirmId] = React.useState<Id<"projects"> | null>(null)
+  const [renaming, setRenaming] = React.useState<{
+    id: Id<"projects">
+    name: string
+  } | null>(null)
 
   const openProject = (id: Id<"projects">) => {
     onClose()
@@ -52,11 +53,6 @@ export function DrawingsList({
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
-        <NameField
-          key={`${currentId}:${currentName}`}
-          initialName={currentName}
-          onRename={(name) => rename({ id: currentId, name })}
-        />
         <p className="text-xs text-muted-foreground">
           Each drawing keeps its own interviews and prompts. An untitled one
           names itself from the drawing&apos;s title, or from the prompt once
@@ -101,15 +97,24 @@ export function DrawingsList({
                   </Button>
                 </span>
               ) : (
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label={`Delete ${p.name}`}
-                  className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                  onClick={() => setConfirmId(p._id)}
-                >
-                  <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-                </Button>
+                <span className="flex shrink-0 items-center opacity-0 group-hover:opacity-100 has-[:focus-visible]:opacity-100">
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label={`Rename ${p.name}`}
+                    onClick={() => setRenaming({ id: p._id, name: p.name })}
+                  >
+                    <HugeiconsIcon icon={PencilEdit02Icon} strokeWidth={2} />
+                  </Button>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label={`Delete ${p.name}`}
+                    onClick={() => setConfirmId(p._id)}
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                  </Button>
+                </span>
               )}
             </li>
           ))}
@@ -138,41 +143,18 @@ export function DrawingsList({
           New drawing
         </Button>
       </div>
+      {renaming && (
+        <RenameDialog
+          key={renaming.id}
+          open
+          onOpenChange={(open) => {
+            if (!open) setRenaming(null)
+          }}
+          projectId={renaming.id}
+          initialName={renaming.name}
+        />
+      )}
     </div>
-  )
-}
-
-/** The current drawing's name, edited in place. Keyed on the name by the parent. */
-function NameField({
-  initialName,
-  onRename,
-}: {
-  initialName: string
-  onRename: (name: string) => Promise<unknown>
-}) {
-  const [name, setName] = React.useState(initialName)
-  const commit = () => {
-    const next = name.trim()
-    if (next && next !== initialName) void onRename(next)
-    else setName(initialName)
-  }
-  return (
-    <label className="block space-y-1">
-      <span className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
-        This drawing
-      </span>
-      <Input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") (e.target as HTMLInputElement).blur()
-          if (e.key === "Escape") setName(initialName)
-        }}
-        aria-label="Drawing name"
-        className="text-sm font-medium"
-      />
-    </label>
   )
 }
 

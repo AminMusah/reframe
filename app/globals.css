@@ -630,12 +630,13 @@
   font-size: 1.125rem;
 }
 
-/* Our dialogs sit above Excalidraw's UI (its mobile bottom bar is z-index 60). */
+/* Our dialogs sit above Excalidraw's UI — its mobile bottom bar (60) and the
+   floating panels (--zIndex-ui-library, 120) — but under its own modals (1000). */
 [data-slot="dialog-overlay"],
 [data-slot="dialog-content"],
 [data-slot="alert-dialog-overlay"],
 [data-slot="alert-dialog-content"] {
-  z-index: 100;
+  z-index: 200;
 }
 
 /* No shadows, no hairlines: surfaces are told apart by fill alone. */

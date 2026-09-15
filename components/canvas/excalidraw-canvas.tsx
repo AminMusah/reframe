@@ -256,7 +256,6 @@ export default function ExcalidrawCanvas({
           <div className="min-h-0 flex-1 font-sans text-foreground">
             <DrawingsList
               currentId={projectId}
-              currentName={project.name}
               onClose={() =>
                 apiRef.current?.toggleSidebar({ name: DRAWINGS, force: false })
               }
