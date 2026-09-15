@@ -145,14 +145,23 @@ export function InterviewPanel({
     let changedIds: string[]
     let skipped: string[] = []
     if (pendingChange.kind === "sketch") {
-      // Photograph the canvas, ask the vision model for shapes on a grid, build
-      // them. The PNG upload is transient; the action deletes it.
+      // With a picture on the canvas: photograph it and ask the vision model
+      // for shapes on a grid (the PNG upload is transient; the action deletes
+      // it). Without one, the instruction alone is the brief — a drawing from
+      // a description.
       setChangeState({ ...base, skipped: [], status: "working" })
       try {
-        const pngFileId = await exportPng(excalidraw, generateUploadUrl)
-        if (!pngFileId) throw new Error("Nothing on the canvas to read")
+        const hasPicture = elements.some(
+          (el) => el.type === "image" && !el.isDeleted
+        )
+        const pngFileId = hasPicture
+          ? await exportPng(excalidraw, generateUploadUrl)
+          : null
+        if (hasPicture && !pngFileId) {
+          throw new Error("Nothing on the canvas to read")
+        }
         const result = await sketchFromReference({
-          pngFileId,
+          pngFileId: pngFileId ?? undefined,
           apiKey: apiKey!,
           model: interview.model,
           instruction: pendingChange.instruction || undefined,

@@ -4,7 +4,11 @@ import { ConvexError, v } from "convex/values"
 
 import { LlmError, type ErrorCode } from "../lib/llm/errors"
 import { isModelId } from "../lib/llm/models"
-import { sketchFromReference, type Sketch } from "../lib/llm/sketch"
+import {
+  sketchFromDescription,
+  sketchFromReference,
+  type Sketch,
+} from "../lib/llm/sketch"
 import { action } from "./_generated/server"
 import { loadPng } from "./helpers"
 
@@ -12,10 +16,11 @@ import { loadPng } from "./helpers"
  * Sketch from reference: the client uploads a PNG of the canvas (which
  * contains the reference picture) and gets back nodes + arrows on a grid.
  * Nothing is stored; the PNG is deleted once read. The key is per-call only.
+ * Without a PNG it is a sketch from description: the instruction alone.
  */
 export const fromReference = action({
   args: {
-    pngFileId: v.id("_storage"),
+    pngFileId: v.optional(v.id("_storage")),
     apiKey: v.string(),
     model: v.string(),
     instruction: v.optional(v.string()),
@@ -31,15 +36,30 @@ export const fromReference = action({
         message: "Sign in first",
       })
     }
-    const png = await loadPng(ctx, pngFileId)
-    await ctx.storage.delete(pngFileId).catch(() => {})
-    if (!png) {
-      throw new ConvexError({ code: "not_found", message: "PNG not found" })
-    }
+    const modelId = isModelId(model) ? model : undefined
     try {
+      if (!pngFileId) {
+        if (!instruction?.trim()) {
+          throw new ConvexError({
+            code: "invalid",
+            message: "Nothing to draw from",
+          })
+        }
+        const sketch = await sketchFromDescription({
+          apiKey,
+          model: modelId,
+          instruction,
+        })
+        return { sketch }
+      }
+      const png = await loadPng(ctx, pngFileId)
+      await ctx.storage.delete(pngFileId).catch(() => {})
+      if (!png) {
+        throw new ConvexError({ code: "not_found", message: "PNG not found" })
+      }
       const sketch = await sketchFromReference({
         apiKey,
-        model: isModelId(model) ? model : undefined,
+        model: modelId,
         png,
         instruction,
       })

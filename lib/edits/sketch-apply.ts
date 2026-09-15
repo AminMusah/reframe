@@ -108,8 +108,12 @@ const CHAR_W = 11
  */
 function layout(sketch: Sketch, placement: SketchPlacement): Map<string, Box> {
   const base = placement.width / Math.max(sketch.canvas.w, sketch.canvas.h)
+  // A shape with no label is pure drawing (an eye, a whisker): it keeps its
+  // grid geometry exactly and may touch or overlap its neighbours.
+  const visual = (n: Sketch["nodes"][number]) =>
+    n.type !== "text" && !n.label.trim()
   const minSize = (n: Sketch["nodes"][number]) => {
-    if (n.type === "text") return { w: 0, h: 0 }
+    if (n.type === "text" || visual(n)) return { w: 0, h: 0 }
     const longest = Math.max(
       ...n.label.split(String.fromCharCode(10)).map((l) => l.length),
       1
@@ -122,8 +126,8 @@ function layout(sketch: Sketch, placement: SketchPlacement): Map<string, Box> {
     for (const n of sketch.nodes) {
       const min = minSize(n)
       // Everything scales together so containers keep containing; labels set a floor.
-      const w = Math.max(min.w, n.w * base * spread, 40)
-      const h = Math.max(min.h, n.h * base * spread, 24)
+      const w = Math.max(min.w, n.w * base * spread, visual(n) ? 4 : 40)
+      const h = Math.max(min.h, n.h * base * spread, visual(n) ? 4 : 24)
       const cx = placement.x + (n.x + n.w / 2) * base * spread
       const cy = placement.y + (n.y + n.h / 2) * base * spread
       out.set(n.ref, { x: cx - w / 2, y: cy - h / 2, w, h })
@@ -141,7 +145,7 @@ function layout(sketch: Sketch, placement: SketchPlacement): Map<string, Box> {
       }
       return gap
     }
-    const refs = sketch.nodes.map((n) => n.ref)
+    const refs = sketch.nodes.filter((n) => !visual(n)).map((n) => n.ref)
     const crowded = refs.some((p, i) =>
       refs.some((q, j) => {
         if (j <= i) return false

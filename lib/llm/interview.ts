@@ -114,18 +114,18 @@ export const editSchema = z.object({
   ops: z.array(editOpSchema).min(1).max(6),
 })
 
-// The drawing contains a picture of a diagram: redraw it as editable shapes
-// (the client runs Sketch-from-reference and asks the author to accept).
+// Draw editable shapes with real layout: a picture on the canvas redrawn, or
+// a diagram from words (the client runs the sketcher and asks the author to accept).
 export const sketchTurnSchema = z.object({
   kind: z.literal("sketch"),
   text: z
     .string()
     .min(1)
-    .describe("One sentence for the author: what you are redrawing and why."),
+    .describe("One sentence for the author: what you are drawing and why."),
   instruction: z
     .string()
     .describe(
-      "What the redraw should reproduce from the picture, or leave out — passed to the sketching model."
+      "What to draw: what to reproduce from the picture or leave out, or the description to draw from — passed to the sketching model."
     ),
   mode: z
     .enum(["add", "replace"])
@@ -151,7 +151,7 @@ export const flatTurnSchema = z.object({
   kind: z
     .enum(["question", "edit", "sketch", "done"])
     .describe(
-      "question: ask the author; edit: change the drawing; sketch: redraw a picture on the canvas as editable shapes; done: finish."
+      "question: ask the author; edit: change the drawing; sketch: draw editable shapes with real layout — a picture on the canvas redrawn, or a diagram from a description; done: finish."
     ),
   text: z
     .string()
@@ -191,7 +191,7 @@ export const flatTurnSchema = z.object({
     .string()
     .nullable()
     .describe(
-      "sketch only: what to reproduce from the picture or leave out. Otherwise null."
+      "sketch only: what to draw — what to reproduce from the picture or leave out, or the description to draw from. Otherwise null."
     ),
   mode: z
     .enum(["add", "replace"])
@@ -266,6 +266,8 @@ Do not ask about things the drawing already makes clear, and do not ask about vi
 
 The drawing is the living spec: keep it in step with what the author tells you. Whenever an answer changes what the drawing states — a label, a connection, a component that should exist or should not, where a flow goes — attach the change to your next question as "ops" with a one-line "change" note, and ask the question. The client applies the change immediately (the author can undo it) and your next reply will carry the updated graph with new ids. Examples: the drawing says Firebase does auth and storage and the author says storage only → relabel those arrows; the author names a component the drawing lacks → add it and connect it; the author says media goes through the backend → delete the direct arrows and connect via the backend. Do not change the drawing for answers that only add detail the drawing never claimed, and never for tidying, styling, or annotations. Ops are coarse — add, connect, rename, delete, move (next to another shape), relative placement — and cannot control spacing or match a picture. The client tidies the drawing after every change; if something is still overlapping afterwards the reply says so, and a "move" op is the way to fix it. Every op must be justified by the answer just given: touch only the elements that answer names or plainly implies, and change an arrow's label only when the answer says what that arrow carries — never relabel several arrows in one sweep. When a change replaces something, delete what it replaces in the same ops. When the author explicitly asks for a change and you have no question to pair it with, return kind "edit" (text + ops) on its own; it is applied the same way.
 
+Kind "sketch" is also how you draw from words. When the author asks you to draw something — a flow, an architecture, a set of screens, or on an empty canvas anything at all — return kind "sketch" with the request in "instruction" (what to draw, in enough detail to lay out) and mode "add"; the client draws it with real layout and the author accepts or undoes it. Edit ops cannot start from nothing, so a sketch is the way to put a first diagram on an empty canvas. Reframe draws diagrams; asked for something that is not one (an animal, a scene), still sketch it — simply, from the shapes available — rather than refuse.
+
 When the drawing contains a picture of a diagram (a screenshot, a photo of a whiteboard), the author usually wants it as editable shapes — but ask first, do not assume. If the canvas is essentially just that picture, make your first question about it, with options such as "Redraw it as editable shapes so we can work on it", "Interview me from the picture as it is", and a third if sensible. Only when the author picks the redraw (or asks for it in their own words) return kind "sketch" instead of a question: the client redraws the picture with real layout and the author accepts or undoes it. Put in "instruction" what to reproduce or leave out; use mode "replace" when the existing shapes are earlier attempts at the same diagram, "add" otherwise. Never try to reproduce a picture with edit ops. After an accepted sketch the reply carries the new graph; continue the interview about the sketched diagram.
 
 Keep it short. Before every question, ask yourself: could a competent engineer build this now, putting anything still unknown under "Open questions" for the agent to ask about? If yes, return kind "done" instead. Most drawings need 4 to 6 questions; do not exceed 8 unless the author keeps adding new information. Specifically:
@@ -327,7 +329,7 @@ export async function interviewTurn(
           type: "text",
           text:
             (input.prior ? priorContext(input.prior) : "") +
-            `Here is the drawing as a graph:\n\n${input.graph}\n\nThe author's browser language is ${input.language ?? "en"}.\n\nStart the interview.`,
+            `Here is the drawing as a graph:\n\n${input.graph}\n\nThe author's browser language is ${input.language ?? "en"}. You are running as the model "${input.model ?? "claude-sonnet-5"}"; say so if asked.\n\nStart the interview.`,
           // The image + graph never change within an interview: cache them.
           providerOptions: {
             anthropic: { cacheControl: { type: "ephemeral" } },

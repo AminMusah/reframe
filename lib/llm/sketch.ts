@@ -54,11 +54,50 @@ You receive an image of a drawing canvas. It contains a reference picture (a scr
 - Do not invent elements that are not in the reference. If the picture is not a diagram, return no nodes.
 The author's instruction may narrow or adjust what to reproduce; follow it.`
 
+export const DESCRIBE_PROMPT = `You draw diagrams as editable shapes from a description.
+
+You receive what the author wants drawn. Lay it out on a grid whose longer side is 100:
+- Use rectangles for components, steps and screens; diamonds for decisions; ellipses for start/end, actors and anything round; free-standing text for titles and notes. Every shape may carry a short label; leave it empty for a purely visual shape.
+- Arrange it the way a careful person would on a whiteboard: a flow runs top to bottom or left to right, siblings align, related things sit near each other. Leave generous gaps (at least half a box-height) and make each box wide enough for its label.
+- One arrow per connection, labelled where the label adds meaning; two-headed where the flow goes both ways.
+- Draw only what was asked for — no invented components, no decoration. If the request is not a diagram (an animal, a scene), compose it as simply as you can from the shapes available: an ellipse for a head, diamonds for ears, small ellipses for eyes; keep it to a dozen shapes or so.`
+
 export type SketchInput = {
   apiKey: string
   model?: ModelId
   png: { base64: string; mediaType: string }
   instruction?: string
+}
+
+export type DescribeInput = {
+  apiKey: string
+  model?: ModelId
+  instruction: string
+}
+
+/** Sketch from description: no picture, just words — for an empty canvas or a fresh diagram. */
+export async function sketchFromDescription(
+  input: DescribeInput
+): Promise<Sketch> {
+  const model = languageModel(input.apiKey, input.model)
+  let output: Sketch | undefined
+  try {
+    const result = await generateText({
+      model,
+      instructions: DESCRIBE_PROMPT,
+      messages: [
+        { role: "user", content: `Draw: ${input.instruction.trim()}` },
+      ],
+      output: Output.object({ schema: sketchSchema, name: "sketch" }),
+      maxRetries: 2,
+      maxOutputTokens: 8192,
+    })
+    output = result.output
+  } catch (err) {
+    throw classifyError(err)
+  }
+  if (!output) throw new LlmError("invalid_output", "Model returned no sketch")
+  return normalize(output)
 }
 
 export async function sketchFromReference(input: SketchInput): Promise<Sketch> {
