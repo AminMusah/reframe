@@ -4,8 +4,8 @@ import { Copy01Icon, RefreshIcon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useAction, useQuery } from "convex/react"
 import * as React from "react"
-import Markdown from "react-markdown"
 
+import { Markdown } from "@/components/markdown"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { api } from "@/convex/_generated/api"
@@ -85,8 +85,10 @@ export function BriefView({
         </div>
       ) : (
         <>
-          <div className="brief rounded-xl bg-secondary px-4 py-3 text-sm">
-            <Markdown>{brief.text}</Markdown>
+          <div className="rounded-xl bg-secondary px-4 py-3 text-sm">
+            <Markdown streaming={brief.status === "streaming"}>
+              {brief.text}
+            </Markdown>
             {brief.status === "streaming" && <span className="caret" />}
           </div>
           {/* Stays in reach however long the prompt runs; the panel scrolls behind it. */}
