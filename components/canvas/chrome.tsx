@@ -26,6 +26,7 @@ import { useTheme } from "next-themes"
 import * as React from "react"
 
 import { HelpDialog } from "@/components/help-dialog"
+import { Logo } from "@/components/logo"
 import { KeyDialog } from "@/components/key-dialog"
 import { RenameDialog } from "@/components/project-menu"
 import { SignInDialog } from "@/components/account-menu"
@@ -235,10 +236,7 @@ export function Chrome({
         <WelcomeScreen.Center>
           <WelcomeScreen.Center.Logo>
             <span className="flex items-center gap-2 font-sans text-2xl font-semibold tracking-tight text-foreground">
-              <span
-                aria-hidden
-                className="inline-block size-4 rounded-[5px] bg-brand"
-              />
+              <Logo className="size-6 text-brand" />
               Reframe
             </span>
           </WelcomeScreen.Center.Logo>

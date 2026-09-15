@@ -131,11 +131,13 @@ Four nouns, one verb. Code and model prompts keep the older internal names in pa
 | `--muted` / `--accent` | `#eae8ee` / `#e1dee6` | secondary surface; hover and the selected row |
 | `--foreground` / `--primary` | `#1b1a1e` | ink; ink pill buttons (default 40 px tall) |
 | `--muted-foreground` | `#716d77` | secondary text |
-| `--brand` | = ink | where an accent would go: the Generate prompt pill and disc, badge, brand square, step numbers, Excalidraw's selected tool and links. Kept as its own token so an accent can be tried by changing one value |
+| `--brand` | = ink | where an accent would go: the Generate prompt pill and disc, badge, the logo dots, step numbers, Excalidraw's selected tool and links. Kept as its own token so an accent can be tried by changing one value |
 | `--lavender` / `--peach` | `#e1dee6` / `#cfcbd6` | "done for you" (drawing-change pill) / "needs you" (drawing changed, changing an answer) |
 | `--forest` | = ink | the headline card ("What we settled on") |
 | `--destructive` | `#e5484d` | the only colour: delete, clear, errors |
 | `--radius` | 1rem | cards 16–29 px; every button a pill; icon buttons discs |
+
+**The mark** is three dots in a triangle, light to ink — draw, answer, paste (`components/logo.tsx` in currentColor; `app/icon.svg` in the palette's greys for the favicon). It echoes the four-dot mark on the author's portfolio.
 
 Dark mode is the same ladder inverted (`#151417` ground, `#222126` panels, `#2c2b31` rows, `#f1eff4` ink). Tried and rejected on the way here: lime, olive and cobalt accents on a warm ground; the author's navy/slate palette; the birthday-site pastels; pure black and white; five cool/warm neutral greys and five white-plus-one-accent sets (cobalt, violet, orange, teal, electric blue). The lavender-grey neutral won for keeping the canvas quiet; the accent question stays open and would land on `--brand` alone.
 

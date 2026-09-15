@@ -13,6 +13,7 @@ import { useAutosave, type SaveStatus } from "@/hooks/use-autosave"
 import { libraryAdapter } from "@/lib/library-store"
 import type { SerializedScene } from "@/lib/serializer"
 
+import { Logo } from "@/components/logo"
 import { DrawingsList } from "@/components/project-menu"
 import { applyEdit } from "@/lib/edits/apply"
 import { serializeScene } from "@/lib/serializer"
@@ -234,10 +235,7 @@ export default function ExcalidrawCanvas({
         >
           <Sidebar.Header>
             <span className="flex items-center gap-1.5 font-sans text-sm font-semibold tracking-tight text-foreground">
-              <span
-                aria-hidden
-                className="inline-block size-2.5 rounded-[3px] bg-brand"
-              />
+              <Logo className="size-4 text-brand" />
               Reframe
             </span>
           </Sidebar.Header>
