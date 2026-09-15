@@ -67,6 +67,7 @@ export const start = mutation({
     graph: v.string(),
     pngFileId: v.optional(v.id("_storage")),
     model: v.string(),
+    language: v.optional(v.string()),
     priorInterviewId: v.optional(v.id("interviews")),
   },
   handler: async (ctx, args) => {

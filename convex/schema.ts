@@ -148,6 +148,8 @@ export default defineSchema({
     graph: v.string(),
     pngFileId: v.optional(v.id("_storage")),
     model: v.string(),
+    // The author's browser language when the interview started (BCP 47).
+    language: v.optional(v.string()),
     status: interviewStatus,
     lastError: v.optional(errorCode),
     turns: v.array(turn),

@@ -50,6 +50,7 @@ export const generate = action({
         graph: interview.graph,
         png,
         transcript: toHistory(interview.turns),
+        language: interview.language,
         onProgress: (text) => {
           const now = Date.now()
           if (now - lastFlush < FLUSH_MS) return

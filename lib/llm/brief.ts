@@ -36,6 +36,8 @@ export type BriefInput = {
   png?: { base64: string; mediaType: string } | null
   /** The full interview, questions and answers, in order. */
   transcript: HistoryEntry[]
+  /** The author's browser language (BCP 47); the brief is written in it. */
+  language?: string
   /** Called with the complete text so far, whenever it grows. */
   onProgress?: (text: string) => void | Promise<void>
 }
@@ -76,7 +78,7 @@ export async function generateBrief(input: BriefInput): Promise<string> {
           : []),
         {
           type: "text",
-          text: `The drawing as a graph:\n\n${input.graph}\n\nThe interview:\n\n${transcript || "(the author ended the interview before answering anything)"}\n\nWrite the brief.`,
+          text: `The drawing as a graph:\n\n${input.graph}\n\nThe interview:\n\n${transcript || "(the author ended the interview before answering anything)"}\n\nThe author's language is ${input.language ?? "en"}: write the brief in it (the coding agent reads any language), keeping the section headings exactly as given.\n\nWrite the brief.`,
         },
       ],
     },

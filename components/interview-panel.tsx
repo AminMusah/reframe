@@ -369,6 +369,7 @@ export function InterviewPanel({
         graph: serialized.text,
         pngFileId,
         model,
+        language: navigator.language,
         priorInterviewId: priorId,
       })
       await step({ interviewId, apiKey })

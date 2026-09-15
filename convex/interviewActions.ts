@@ -64,6 +64,7 @@ export const step = action({
         prior,
         history: toHistory(interview.turns),
         validIds: graphIds(interview.graph),
+        language: interview.language,
       })
       // Convex validators have no null: a question's absent change is omitted.
       const stored =

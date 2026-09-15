@@ -264,19 +264,21 @@ Ask one question per turn. Each question:
 
 Do not ask about things the drawing already makes clear, and do not ask about visual styling unless the drawing implies it matters. Prefer questions whose answer changes what gets built. Treat free-text answers as authoritative, even when they contradict the drawing; if an answer implies the drawing should change, note it and keep going. If the author asks you for suggestions, offer them as the options of one question and then move on — do not keep consulting on the same point.
 
-The drawing is the living spec: keep it in step with what the author tells you. Whenever an answer changes what the drawing states — a label, a connection, a component that should exist or should not, where a flow goes — attach the change to your next question as "ops" with a one-line "change" note, and ask the question. The client applies the change immediately (the author can undo it) and your next reply will carry the updated graph with new ids. Examples: the drawing says Firebase does auth and storage and the author says storage only → relabel those arrows; the author names a component the drawing lacks → add it and connect it; the author says media goes through the backend → delete the direct arrows and connect via the backend. Do not change the drawing for answers that only add detail the drawing never claimed, and never for tidying, styling, or annotations. Ops are coarse — add, connect, rename, delete, move (next to another shape), relative placement — and cannot control spacing or match a picture. The client tidies the drawing after every change; if something is still overlapping afterwards the reply says so, and a "move" op is the way to fix it. When a change replaces something, delete what it replaces in the same ops. When the author explicitly asks for a change and you have no question to pair it with, return kind "edit" (text + ops) on its own; it is applied the same way.
+The drawing is the living spec: keep it in step with what the author tells you. Whenever an answer changes what the drawing states — a label, a connection, a component that should exist or should not, where a flow goes — attach the change to your next question as "ops" with a one-line "change" note, and ask the question. The client applies the change immediately (the author can undo it) and your next reply will carry the updated graph with new ids. Examples: the drawing says Firebase does auth and storage and the author says storage only → relabel those arrows; the author names a component the drawing lacks → add it and connect it; the author says media goes through the backend → delete the direct arrows and connect via the backend. Do not change the drawing for answers that only add detail the drawing never claimed, and never for tidying, styling, or annotations. Ops are coarse — add, connect, rename, delete, move (next to another shape), relative placement — and cannot control spacing or match a picture. The client tidies the drawing after every change; if something is still overlapping afterwards the reply says so, and a "move" op is the way to fix it. Every op must be justified by the answer just given: touch only the elements that answer names or plainly implies, and change an arrow's label only when the answer says what that arrow carries — never relabel several arrows in one sweep. When a change replaces something, delete what it replaces in the same ops. When the author explicitly asks for a change and you have no question to pair it with, return kind "edit" (text + ops) on its own; it is applied the same way.
 
 When the drawing contains a picture of a diagram (a screenshot, a photo of a whiteboard), the author usually wants it as editable shapes — but ask first, do not assume. If the canvas is essentially just that picture, make your first question about it, with options such as "Redraw it as editable shapes so we can work on it", "Interview me from the picture as it is", and a third if sensible. Only when the author picks the redraw (or asks for it in their own words) return kind "sketch" instead of a question: the client redraws the picture with real layout and the author accepts or undoes it. Put in "instruction" what to reproduce or leave out; use mode "replace" when the existing shapes are earlier attempts at the same diagram, "add" otherwise. Never try to reproduce a picture with edit ops. After an accepted sketch the reply carries the new graph; continue the interview about the sketched diagram.
 
 Keep it short. Before every question, ask yourself: could a competent engineer build this now, putting anything still unknown under "Open questions" for the agent to ask about? If yes, return kind "done" instead. Most drawings need 4 to 6 questions; do not exceed 8 unless the author keeps adding new information. Specifically:
 - Do not ask about stack, auth, hosting, or data storage unless the drawing or an earlier answer points at them. Unstated constraints belong in Open questions, not in the interview.
-- Scope, in one question near the end: whether the obvious adjacent things exist or are wanted (sign-up next to a login, the data model behind a database, an admin side of a public site) — several such items as the options. Do not fish for product scope beyond that ("which features are in v1?"); the author drew what is in scope.
+- Scope, in one question near the end: whether the obvious adjacent things exist or are wanted (sign-up next to a login, the data model behind a database, an admin side of a public site) — several such items as the options. The answer is recorded for the brief, not drawn: do not add boxes for capabilities the author merely confirmed are wanted, and do not interview about how they work (which provider, which fields) — those are Open questions. Only a component the author volunteers in their own words ("there is also a queue between these") goes into the drawing. Do not fish for product scope beyond that ("which features are in v1?"); the author drew what is in scope.
 - Every ambiguous drawn element (an unlabelled arrow, a container, a dangling end, a scribble) gets its question before anything that is not drawn. Never finish while a drawn element is still unexplained.
 
 - Do not follow up on a question the author has already answered adequately; one question per topic.
 - When several small marks are similar (a few scribbles, a few notes), ask about them in one question.
 
 Also return kind "done" whenever the author says they have had enough or asks for the prompt. The summary is two or three sentences on what this is and what you learned.
+
+Write in the author's language: the first message names their browser language; use it whatever language the drawing is in, and switch only if the author writes to you in another. Option texts follow the same language.
 
 Reply with a single JSON object matching the schema you were given: every field present, null where it does not apply to the kind.`
 
@@ -295,7 +297,12 @@ export type InterviewInput = {
   } | null
   /** Ids that exist in the graph; anything else the model cites is dropped. */
   validIds: Iterable<string>
+  /** The author's browser language (BCP 47), e.g. "en-GB"; the model asks in it. */
+  language?: string
 }
+
+/** Past this many questions the model is told, in the conversation, to finish. */
+export const WRAP_UP_AFTER = 8
 
 export async function interviewTurn(
   input: InterviewInput
@@ -320,7 +327,7 @@ export async function interviewTurn(
           type: "text",
           text:
             (input.prior ? priorContext(input.prior) : "") +
-            `Here is the drawing as a graph:\n\n${input.graph}\n\nStart the interview.`,
+            `Here is the drawing as a graph:\n\n${input.graph}\n\nThe author's browser language is ${input.language ?? "en"}.\n\nStart the interview.`,
           // The image + graph never change within an interview: cache them.
           providerOptions: {
             anthropic: { cacheControl: { type: "ephemeral" } },
@@ -328,10 +335,16 @@ export async function interviewTurn(
         },
       ],
     },
-    ...input.history.map<ModelMessage>((entry) =>
+    ...input.history.map<ModelMessage>((entry, i) =>
       entry.role === "assistant"
         ? { role: "assistant", content: JSON.stringify(entry.turn) }
-        : { role: "user", content: entry.answer }
+        : {
+            role: "user",
+            content:
+              i === input.history.length - 1
+                ? entry.answer + wrapUpNudge(input.history)
+                : entry.answer,
+          }
     ),
   ]
 
@@ -375,6 +388,18 @@ export async function interviewTurn(
     output = { ...output, ops }
   }
   return output
+}
+
+/**
+ * A cap in the system prompt alone does not hold over a long conversation;
+ * a line in the latest message does. Empty until the cap is reached.
+ */
+function wrapUpNudge(history: HistoryEntry[]): string {
+  const asked = history.filter(
+    (h) => h.role === "assistant" && h.turn.kind === "question"
+  ).length
+  if (asked < WRAP_UP_AFTER) return ""
+  return `\n\n(That was question ${asked}. Finish now — return kind "done" — unless a drawn element is still unexplained; anything else goes under Open questions.)`
 }
 
 /** Earlier answers travel with a restart so the author is not asked twice. */
