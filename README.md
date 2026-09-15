@@ -2,7 +2,7 @@
 
 Draw what you're building, answer a short interview about it, get a prompt your coding agent (Claude Code, Codex, Cursor…) can build from. Live at [reframe-liard.vercel.app](https://reframe-liard.vercel.app). Design and decisions: [`docs/DESIGN.md`](docs/DESIGN.md).
 
-The canvas is the whole window (Excalidraw, themed with the app's own tokens). Everything else floats over it: ☰ for drawings, export, model & key, theme, sign-in and shortcuts; the drawing's name and **✦ Generate prompt** top-right; the interview panel, the drawings list, search and the shape library as floating cards. Works on phones (the panel goes full-screen, options are tap-sized).
+The canvas is the whole window (Excalidraw, themed with the app's own tokens). Everything else floats over it: ☰ for drawings, Mermaid import, the shape library, tidy-up, export, model & key, theme, sign-in and shortcuts; the drawing's name and **✦ Generate prompt** top-right; the interview panel, the drawings list, search and the shape library as floating cards. Works on phones (the panel goes full-screen, options are tap-sized).
 
 ## Local development
 
@@ -25,13 +25,15 @@ npx convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
 npx convex env set SITE_URL http://localhost:3000
 ```
 
-Open the app, draw (or *Load an example drawing*), click **✦ Generate prompt**, paste an API key when the panel asks (it stays in your browser), then **Start the interview**.
+Open the app, draw (or *Load an example drawing*), click **✦ Generate prompt**, paste an API key when the panel asks — Anthropic, OpenAI, Google or OpenRouter; it stays in your browser — pick a model, then **Start the interview**. The interview and the prompt are written in your browser's language.
+
+When the interviewer edits the drawing, a tidy pass makes room (and lays the whole drawing out again if that is not enough); **Tidy up the drawing** in ☰ runs the same pass by hand, undoably.
 
 ## Scripts
 
 | Command | What |
 |---|---|
-| `pnpm test` | Serializer unit tests over `fixtures/*.excalidraw` |
+| `pnpm test` | Unit tests: the serializer over `fixtures/*.excalidraw`, the tidy and layout passes |
 | `pnpm dump-graph fixtures/x.excalidraw` | Print what the model sees for a drawing |
 | `pnpm eval [fixture] [--brief]` | Interview evals: simulated author + judge (needs `ANTHROPIC_API_KEY` in env or `.env.local`) |
 | `pnpm build` | Static export to `out/` |
@@ -69,4 +71,4 @@ Gotchas seen on the first deploy:
 - [x] Register a **prod** GitHub OAuth app with callback `https://<prod-deployment>.convex.site/api/auth/callback/github`; set `GITHUB_CLIENT_ID/SECRET` on the prod Convex deployment.
 - [x] Register a **prod** Google OAuth client (same Google Cloud project is fine — the consent screen is shared): redirect URI `https://<prod-deployment>.convex.site/api/auth/callback/google`, JavaScript origins `https://<prod-deployment>.convex.site` and `https://<your-app>.vercel.app`; set `GOOGLE_CLIENT_ID/SECRET` on prod.
 - [x] Google consent screen: click **Publish app** and confirm. Until then it is in Testing mode and only listed test users can sign in — on the live site too. With only the `openid`/`email`/`profile` scopes Better Auth requests, no verification review is needed; it takes effect immediately.
-- [ ] Drawings are capped at `MAX_PROJECTS_PER_USER` = 10 (`convex/projects.ts`); interview PNG snapshots are deleted when replaced (rebase) and when a newer interview starts, so storage is ≈ one scene + one PNG per drawing.
+- [x] Drawings are capped at `MAX_PROJECTS_PER_USER` = 10 (`convex/projects.ts`); interview PNG snapshots are deleted when replaced (rebase) and when a newer interview starts, so storage is ≈ one scene + one PNG per drawing.
