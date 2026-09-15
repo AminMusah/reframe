@@ -67,7 +67,7 @@ export function BriefView({
           Prompt
         </p>
         <p className="text-sm font-medium">
-          Paste this into Claude Code, Codex, Cursor — any coding agent.
+          Paste this into Claude Code, Codex, Cursor or any coding agent.
         </p>
       </div>
 

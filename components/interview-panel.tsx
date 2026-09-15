@@ -1231,6 +1231,8 @@ export async function exportPng(
  * clear the selection when there is nothing to show. Short ids map back to
  * Excalidraw ids through the serializer's idMap.
  */
+let highlightSeq = 0
+
 function useHighlight(
   excalidrawApi: React.RefObject<ExcalidrawImperativeAPI | null>,
   elementIds: string[] | null,
@@ -1240,6 +1242,7 @@ function useHighlight(
   React.useEffect(() => {
     const api = excalidrawApi.current
     if (!api || !idMap) return
+    const seq = ++highlightSeq
     const ids = (key ? key.split(",") : [])
       .map((short) => idMap[short])
       .filter((id): id is string => !!id)
@@ -1264,6 +1267,12 @@ function useHighlight(
     if (ids.length > 0 && container) {
       container.setAttribute("data-highlighting", "")
       container.addEventListener("pointerdown", release)
+    } else if (container) {
+      // Nothing to point at: let the island back once the previous
+      // selection has been cleared (that clear is queued ahead of this).
+      void import("@excalidraw/excalidraw").then(() => {
+        if (highlightSeq === seq) container.removeAttribute("data-highlighting")
+      })
     }
     if (elements.length > 0 && !inView(api, elements)) {
       void api.setViewport({
@@ -1274,8 +1283,15 @@ function useHighlight(
       })
     }
     return () => {
-      release()
-      // The panel closing or the question moving on takes the selection with it.
+      container?.removeEventListener("pointerdown", release)
+      // The panel closing or the question moving on takes the selection with
+      // it. The island stays hidden until the selection is actually gone —
+      // and stays hidden altogether when the next question has already
+      // taken over — otherwise it flashes in between.
+      const done = () => {
+        if (highlightSeq === seq)
+          container?.removeAttribute("data-highlighting")
+      }
       if (ids.length > 0) {
         void import("@excalidraw/excalidraw").then(
           ({ CaptureUpdateAction }) => {
@@ -1283,8 +1299,11 @@ function useHighlight(
               appState: { selectedElementIds: {} },
               captureUpdate: CaptureUpdateAction.NEVER,
             })
+            done()
           }
         )
+      } else {
+        done()
       }
     }
     // idMap changes with every autosave; only the question should retrigger.
