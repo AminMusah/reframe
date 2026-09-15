@@ -142,7 +142,6 @@
   --sidebar-ring: var(--ring);
 }
 
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -227,6 +226,25 @@
   transition-delay: 160ms;
 }
 
+/* A faster spinner reads as a faster app. */
+[data-slot="spinner"] {
+  animation-duration: 0.7s;
+}
+
+/* A swapped state (Copy → Copied) crossfades through a touch of blur
+   instead of snapping: two states read as one thing changing. */
+.swap {
+  opacity: 1;
+  filter: blur(0);
+  transition:
+    opacity 150ms var(--ease-out-strong),
+    filter 150ms var(--ease-out-strong);
+  @starting-style {
+    opacity: 0;
+    filter: blur(2px);
+  }
+}
+
 /* The streaming caret. */
 .caret {
   display: inline-block;
@@ -255,6 +273,18 @@
   .pressable:active:not(:disabled) {
     transform: none;
   }
+  .excalidraw .sidebar,
+  .excalidraw .dropdown-menu-container {
+    transition: opacity 200ms ease;
+    transform: none;
+    @starting-style {
+      transform: none;
+    }
+  }
+  .excalidraw .ToolIcon:active .ToolIcon__icon,
+  .excalidraw .layer-ui__wrapper__top-right .sidebar-trigger:active {
+    transform: none;
+  }
 }
 
 /* Excalidraw hosts the interview panel in its sidebar slot. */
@@ -270,6 +300,54 @@
   color: var(--foreground);
   border: 0;
 }
+/* A floating panel arrives from just beside its place; it opens a few times
+   a session, so it may take 200 ms. Transform and opacity only. */
+:root .excalidraw .sidebar {
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    opacity 200ms var(--ease-out-strong),
+    transform 200ms var(--ease-out-strong);
+  @starting-style {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+:root .excalidraw .sidebar.reframe-panel--left {
+  @starting-style {
+    transform: translateX(-8px);
+  }
+}
+/* Menus scale in from the corner they hang off, never from nothing. */
+:root .excalidraw .dropdown-menu-container {
+  transform-origin: top left;
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity 150ms var(--ease-out-strong),
+    transform 150ms var(--ease-out-strong);
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+:root .excalidraw .App-toolbar__extra-tools-dropdown .dropdown-menu-container,
+:root .excalidraw .layer-ui__wrapper__top-right .dropdown-menu-container {
+  transform-origin: top right;
+}
+/* Every pressable thing answers the press — Excalidraw's tools too. */
+.excalidraw .ToolIcon .ToolIcon__icon,
+.excalidraw .layer-ui__wrapper__top-right .sidebar-trigger {
+  transition:
+    transform 160ms var(--ease-out-strong),
+    background-color 160ms var(--ease-out-strong),
+    color 160ms var(--ease-out-strong);
+}
+.excalidraw .ToolIcon:active .ToolIcon__icon,
+.excalidraw .layer-ui__wrapper__top-right .sidebar-trigger:active {
+  transform: scale(0.96);
+}
+
 /* Floating (undocked): a card inset from the edges, like the rest of the UI. */
 :root .excalidraw .sidebar {
   /* Every panel floats, docked or not (docked = Excalidraw keeps it open

@@ -141,12 +141,18 @@ function CopyButton({ text, disabled }: { text: string; disabled: boolean }) {
         setTimeout(() => setCopied(false), 1500)
       }}
     >
-      <HugeiconsIcon
-        icon={copied ? Tick02Icon : Copy01Icon}
-        strokeWidth={2}
-        data-icon="inline-start"
-      />
-      {copied ? "Copied" : "Copy prompt"}
+      {/* Keyed so the state change crossfades instead of snapping. */}
+      <span
+        key={String(copied)}
+        className="swap inline-flex items-center gap-1.5"
+      >
+        <HugeiconsIcon
+          icon={copied ? Tick02Icon : Copy01Icon}
+          strokeWidth={2}
+          data-icon="inline-start"
+        />
+        {copied ? "Copied" : "Copy prompt"}
+      </span>
     </Button>
   )
 }
