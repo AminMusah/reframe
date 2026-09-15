@@ -446,6 +446,10 @@ export function InterviewPanel({
   if (interview === undefined) return null
 
   const idle = !interview || interview.status === "done"
+  // A cleared canvas with a finished interview behind it: the panel starts
+  // over (the old interview and prompt come back with the drawing, and
+  // "Interview again" would carry its answers forward anyway).
+  const cleared = idle && nodeCount === 0
   const needsKey = !apiKey || interview?.lastError === "bad_key"
   const editingQuestion =
     editing !== null && interview
@@ -463,7 +467,7 @@ export function InterviewPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
-        {drawingChanged && ignoredHash !== sceneHash && (
+        {drawingChanged && !cleared && ignoredHash !== sceneHash && (
           <Notice tone="warn" className="enter">
             <p className="font-medium">
               The drawing changed since this interview started.
@@ -487,9 +491,9 @@ export function InterviewPanel({
           </Notice>
         )}
 
-        {!interview && <EmptyState nodeCount={nodeCount} />}
+        {(!interview || cleared) && <EmptyState nodeCount={nodeCount} />}
 
-        {interview && (
+        {interview && !cleared && (
           <Transcript
             turns={interview.turns}
             editing={editing}
@@ -665,7 +669,7 @@ export function InterviewPanel({
         </div>
       )}
 
-      {!interview && !needsKey && (
+      {(!interview || cleared) && !needsKey && (
         <div className="space-y-2 px-5 py-4">
           <label className="flex items-center justify-between gap-3 pb-1 text-sm">
             <span className="text-muted-foreground">Model</span>
