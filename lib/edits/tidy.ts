@@ -131,8 +131,15 @@ export function tidy(
     const w = Math.max(s.width, MIN_W, fit.w * room + 2 * PAD)
     const h = Math.max(s.height, MIN_H, fit.h * room + 2 * PAD)
     if (Math.abs(w - s.width) < 1 && Math.abs(h - s.height) < 1) {
-      // Still re-wrap the label to the box it has.
+      // Still re-wrap the label to the box it has — with its size and
+      // position: a text element keeps its own width and height, and
+      // Excalidraw clips to them, so new lines without new bounds show up
+      // as a cut-off, garbled label.
       label.text = fit.text
+      label.width = fit.w
+      label.height = fit.h
+      label.x = cx(box(s)) - fit.w / 2
+      label.y = cy(box(s)) - fit.h / 2
       continue
     }
     const c = { x: cx(box(s)), y: cy(box(s)) }

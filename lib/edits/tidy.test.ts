@@ -298,13 +298,37 @@ describe("tidy with moves", () => {
     expect(b.x).toBe(0)
     expect(b.y).toBe(108)
     // The label went along, and the arrow now leaves A's bottom for B's top.
-    expect(bt.x).toBe(10)
-    expect(bt.y).toBe(118)
+    expect((bt.x as number) + (bt.width as number) / 2).toBeCloseTo(80, 0)
+    expect((bt.y as number) + (bt.height as number) / 2).toBeCloseTo(148, 0)
     const arr = ab[0]
     const start = { x: arr.x as number, y: arr.y as number }
     expect(start.y).toBeCloseTo(80, 0)
     expect((arr.startBinding as { fixedPoint: number[] }).fixedPoint[1]).toBe(1)
     // C, which sat where B landed near, is pushed further down, not overlapped.
     expect((c.y as number) >= 108 + 80).toBe(true)
+  })
+})
+
+describe("tidy re-wrap", () => {
+  it("gives a re-wrapped label its new bounds even when the box keeps its size", () => {
+    // A roomy box whose label was one long line: it wraps, and must not
+    // keep the one-line height (Excalidraw clips to the text's own bounds).
+    const [s, t] = shape(
+      "s",
+      0,
+      0,
+      400,
+      200,
+      "Python Pipeline (Local Development) for the team"
+    )
+    t.width = 48 * 12
+    t.text = "Python Pipeline (Local Development) for the team"
+    run([s, t], ["s"])
+    const lines = (t.text as string).split("\n").length
+    expect(lines).toBeGreaterThan(1)
+    expect(t.height).toBe(lines * 25)
+    expect(t.width).toBeLessThan(48 * 12)
+    expect((t.x as number) + (t.width as number) / 2).toBeCloseTo(200, 0)
+    expect(s.width).toBe(400)
   })
 })
