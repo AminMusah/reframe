@@ -178,8 +178,8 @@ export default function ExcalidrawCanvas({
           <>
             <button
               type="button"
-              className="sidebar-trigger max-w-48 truncate"
-              title="Drawings"
+              className="sidebar-trigger max-w-48"
+              title={project.name}
               onClick={() =>
                 apiRef.current?.toggleSidebar({ name: DRAWINGS, force: true })
               }
@@ -187,7 +187,11 @@ export default function ExcalidrawCanvas({
               {isMobile ? (
                 <HugeiconsIcon icon={FolderOpenIcon} strokeWidth={2} />
               ) : (
-                project.name
+                // Excalidraw's trigger is a flex box with line-height 0; the
+                // ellipsis needs a block child with a line height of its own.
+                <span className="min-w-0 truncate leading-none">
+                  {project.name}
+                </span>
               )}
             </button>
             <Sidebar.Trigger
