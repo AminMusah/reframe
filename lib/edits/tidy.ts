@@ -40,7 +40,7 @@ const MAX_SHOVE = 260 // a box is never moved further than this to make room
 const ROUTE_CLEAR = 36 // how far a rerouted arrow passes an obstacle
 const MAX_PUSHES = 200
 
-const SHAPES = new Set(["rectangle", "ellipse", "diamond"])
+export const SHAPES = new Set(["rectangle", "ellipse", "diamond"])
 
 const box = (el: {
   x: number
@@ -524,7 +524,7 @@ function shiftLabel(el: El, label: Text | undefined, dx: number, dy: number) {
   label.y += dy
 }
 
-function bump(el: El) {
+export function bump(el: El) {
   el.version += 1
   el.versionNonce = Math.floor(Math.random() * 2 ** 31)
   el.updated = Date.now()
@@ -540,7 +540,7 @@ function contains(outer: Box, inner: Box): boolean {
   return inner.w * inner.h > 0 && overlap / (inner.w * inner.h) >= 0.5
 }
 
-function overlapsWithGap(a: Box, b: Box, gap: number): boolean {
+export function overlapsWithGap(a: Box, b: Box, gap: number): boolean {
   return (
     a.x < b.x + b.w + gap &&
     b.x < a.x + a.w + gap &&
@@ -581,7 +581,7 @@ function anchors(
 }
 
 /** Does the open segment p→q pass through the box (shrunk a little)? */
-function segmentHitsBox(
+export function segmentHitsBox(
   p: { x: number; y: number },
   q: { x: number; y: number },
   b: Box

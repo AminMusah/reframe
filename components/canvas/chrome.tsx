@@ -1,5 +1,6 @@
 "use client"
 
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types"
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types"
 import { MainMenu, WelcomeScreen } from "@excalidraw/excalidraw"
 import {
@@ -13,6 +14,7 @@ import {
   Key01Icon,
   Login03Icon,
   Logout03Icon,
+  MagicWand01Icon,
   Moon02Icon,
   PencilEdit02Icon,
   SparklesIcon,
@@ -42,6 +44,8 @@ import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { authClient } from "@/lib/auth-client"
 import { useApiKey } from "@/lib/llm-settings"
+import { layoutScene } from "@/lib/edits/layout"
+import { measureText } from "@/lib/edits/apply"
 import { clearMirror } from "@/lib/scene-store"
 
 const icon = (i: typeof Key01Icon) => (
@@ -151,6 +155,33 @@ export function Chrome({
           }
         >
           Shape library
+        </MainMenu.Item>
+        <MainMenu.Item
+          icon={icon(MagicWand01Icon)}
+          onSelect={async () => {
+            const api = excalidraw.current
+            if (!api) return
+            // Copies: the pass mutates in place; the scene gets the result as
+            // one undoable step.
+            const elements = api
+              .getSceneElements()
+              .map((el) => ({ ...el }) as ExcalidrawElement)
+            if (layoutScene(elements, measureText).length === 0) return
+            const { CaptureUpdateAction } =
+              await import("@excalidraw/excalidraw")
+            api.updateScene({
+              elements,
+              captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+            })
+            void api.setViewport({
+              target: api.getSceneElements(),
+              fit: "scale-down",
+              animation: true,
+              offsets: { ui: true },
+            })
+          }}
+        >
+          Tidy up the drawing
         </MainMenu.Item>
         <MainMenu.DefaultItems.SaveAsImage />
         <MainMenu.DefaultItems.SearchMenu />

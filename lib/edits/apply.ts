@@ -4,6 +4,7 @@ import type { convertToExcalidrawElements } from "@excalidraw/excalidraw"
 import type { EditOp } from "@/lib/llm/interview"
 import type { Box } from "@/lib/serializer"
 
+import { audit, layoutScene } from "./layout"
 import { tidy, type Measure } from "./tidy"
 
 type Convert = typeof convertToExcalidrawElements
@@ -28,6 +29,8 @@ export type ApplyResult = {
   changedIds: string[]
   /** Ops that could not be applied, in plain words. */
   skipped: string[]
+  /** The tidy pass was not enough and the whole drawing was laid out again. */
+  relaid: boolean
 }
 
 const GAP = 60
@@ -269,12 +272,20 @@ export function applyEdit(input: ApplyInput): ApplyResult {
 
   // Breathing room: size boxes for their labels, push neighbours, route arrows.
   const all = [...byId.values(), ...added]
-  tidy(all, changed, input.measure ?? measureText, seeds)
+  const measure = input.measure ?? measureText
+  tidy(all, changed, measure, seeds)
+  // Check the work: if arrows still cut through boxes or labels sit on
+  // shapes, lay the whole drawing out again rather than leave it messy.
+  let relaid = false
+  if (audit(all).length > 0) {
+    relaid = layoutScene(all, measure).length > 0
+  }
 
   return {
     elements: all,
     changedIds: [...changed].filter((id) => !byId.get(id)?.isDeleted),
     skipped,
+    relaid,
   }
 }
 

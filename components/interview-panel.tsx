@@ -3,6 +3,7 @@
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types"
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types"
 import { useAction, useMutation, useQuery } from "convex/react"
+import { ConvexError } from "convex/values"
 import * as React from "react"
 
 import {
@@ -17,6 +18,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { BriefView } from "@/components/brief-view"
 import { KeyForm } from "@/components/key-form"
 import { Button } from "@/components/ui/button"
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "cn"
@@ -25,6 +27,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel"
 import { applyEdit } from "@/lib/edits/apply"
 import { applySketch, placeSketch } from "@/lib/edits/sketch-apply"
 import { useApiKey, useModel } from "@/lib/llm-settings"
+import { isModelId, modelsFor, providerForKey } from "@/lib/llm/models"
 import {
   hashScene,
   serializeScene,
@@ -32,6 +35,10 @@ import {
 } from "@/lib/serializer"
 
 type Interview = Doc<"interviews">
+
+const isConvexCode = (err: unknown, code: string) =>
+  err instanceof ConvexError &&
+  (err.data as { code?: string } | undefined)?.code === code
 type Turn = Interview["turns"][number]
 
 export function InterviewPanel({
@@ -48,7 +55,7 @@ export function InterviewPanel({
 }) {
   const interview = useQuery(api.interviews.latestForProject, { projectId })
   const [apiKey, setApiKey] = useApiKey()
-  const [model] = useModel()
+  const [model, setModel] = useModel()
   const start = useMutation(api.interviews.start)
   const finish = useMutation(api.interviews.finish)
   const rebase = useMutation(api.interviews.rebase)
@@ -130,7 +137,8 @@ export function InterviewPanel({
       pendingChange.kind === "question"
         ? (pendingChange.change ?? "Updated the drawing")
         : pendingChange.text
-    const base = { key: changeKey, kind, text, snapshot: elements } as const
+    let base = { key: changeKey, kind, text, snapshot: elements } as const
+    let relaid = false
 
     let next: readonly ExcalidrawElement[]
     let changedIds: string[]
@@ -195,6 +203,10 @@ export function InterviewPanel({
       next = result.elements
       changedIds = result.changedIds
       skipped = result.skipped
+      if (result.relaid) {
+        relaid = true
+        base = { ...base, text: `${text} — and tidied the whole drawing` }
+      }
     }
 
     excalidraw.updateScene({
@@ -209,9 +221,9 @@ export function InterviewPanel({
     const changed = excalidraw
       .getSceneElements()
       .filter((el) => changedIds.includes(el.id))
-    if (changed.length > 0 && !inView(excalidraw, changed)) {
+    if (relaid || (changed.length > 0 && !inView(excalidraw, changed))) {
       void excalidraw.setViewport({
-        target: changed,
+        target: relaid ? excalidraw.getSceneElements() : changed,
         fit: "scale-down",
         animation: true,
         offsets: { ui: true },
@@ -360,8 +372,14 @@ export function InterviewPanel({
     }
   }
 
+  // Synchronous guard: a held key or a double tap fires again before the
+  // re-render that disables the controls, and the server rejects the second
+  // answer ("not_awaiting").
+  const inFlight = React.useRef(false)
   const answer = async (text: string) => {
-    if (!interview || !apiKey) return
+    if (!interview || !apiKey || inFlight.current) return
+    if (interview.status !== "awaiting_answer" && editing === null) return
+    inFlight.current = true
     setBusy(true)
     try {
       if (editing !== null) {
@@ -388,7 +406,11 @@ export function InterviewPanel({
         apiKey,
         answer: note ? `${note}\n\nAnswer: ${text}` : text,
       })
+    } catch (err) {
+      // The answer already landed (a repeat submit); the doc tells the truth.
+      if (!isConvexCode(err, "not_awaiting")) throw err
     } finally {
+      inFlight.current = false
       setBusy(false)
     }
   }
@@ -627,6 +649,23 @@ export function InterviewPanel({
 
       {!interview && !needsKey && (
         <div className="space-y-2 px-5 py-4">
+          <label className="flex items-center justify-between gap-3 pb-1 text-sm">
+            <span className="text-muted-foreground">Model</span>
+            <NativeSelect
+              size="sm"
+              aria-label="Model"
+              value={model}
+              onChange={(e) => {
+                if (isModelId(e.target.value)) setModel(e.target.value)
+              }}
+            >
+              {modelsFor(providerForKey(apiKey!)).map((m) => (
+                <NativeSelectOption key={m.id} value={m.id}>
+                  {m.label}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </label>
           <Button
             size="lg"
             className="w-full"
@@ -910,7 +949,7 @@ function QuestionCard({
   // 1–5 answer with the keyboard; no animation on keyboard-driven actions.
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (disabled || writing) return
+      if (disabled || writing || e.repeat) return
       const target = e.target as HTMLElement | null
       if (target?.closest("input, textarea, [contenteditable]")) return
       const n = Number(e.key)

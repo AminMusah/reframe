@@ -23,6 +23,9 @@ importers:
       '@convex-dev/better-auth':
         specifier: ^0.12.5
         version: 0.12.5(@standard-schema/spec@1.1.0)(better-auth@1.6.31(next@16.2.6(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@5.0.0(@types/node@20.19.43)(vite@8.3.0(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13))))(convex@1.45.0(react@19.2.4))(hono@4.13.7)(react@19.2.4)(typescript@5.9.3)
+      '@dagrejs/dagre':
+        specifier: ^3.1.1
+        version: 3.1.1
       '@excalidraw/excalidraw':
         specifier: 0.18.0-afa3a65
         version: 0.18.0-afa3a65(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(immer@11.1.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -463,6 +466,12 @@ packages:
       better-auth: '>=1.6.11 <1.7.0'
       convex: ^1.25.0
       react: ^18.3.1 || ^19.0.0
+
+  '@dagrejs/dagre@3.1.1':
+    resolution: {integrity: sha512-zroZB1dFOFiGgv4Xcrn1DckB1o4aOikPqD2NDQPV0WM//CXGcS6xiD0rNkqHmw6FEg4tabt4nxPLwgCWT+Vb2A==}
+
+  '@dagrejs/graphlib@4.0.5':
+    resolution: {integrity: sha512-7xrBTqIts3o+PMUZX97wSc+7TUbW+/rULzGNCTP6yooNVDXbzw4Wutg/H/xOutTB/c/k0YqOAavgPh4/Zk9PFA==}
 
   '@date-fns/tz@1.5.0':
     resolution: {integrity: sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg==}
@@ -6274,6 +6283,12 @@ snapshots:
       - '@standard-schema/spec'
       - hono
       - typescript
+
+  '@dagrejs/dagre@3.1.1':
+    dependencies:
+      '@dagrejs/graphlib': 4.0.5
+
+  '@dagrejs/graphlib@4.0.5': {}
 
   '@date-fns/tz@1.5.0': {}
 
