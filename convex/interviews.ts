@@ -1,3 +1,4 @@
+import { deleteFile } from "./helpers"
 import { ConvexError, v } from "convex/values"
 
 import { authComponent } from "./auth"
@@ -95,12 +96,12 @@ export const start = mutation({
       .collect()
     for (const old of earlier) {
       if (old.pngFileId && old.pngFileId !== args.pngFileId) {
-        await ctx.storage.delete(old.pngFileId)
+        await deleteFile(ctx, old.pngFileId)
         await ctx.db.patch(old._id, { pngFileId: undefined })
       }
     }
     if (project.pngFileId) {
-      await ctx.storage.delete(project.pngFileId)
+      await deleteFile(ctx, project.pngFileId)
       await ctx.db.patch(args.projectId, { pngFileId: undefined })
     }
     return ctx.db.insert("interviews", {
@@ -235,7 +236,7 @@ export const rebase = mutation({
   handler: async (ctx, { id, sceneHash, graph, pngFileId, turnIndex }) => {
     const interview = await ownedInterview(ctx, id)
     if (pngFileId && interview.pngFileId && interview.pngFileId !== pngFileId) {
-      await ctx.storage.delete(interview.pngFileId)
+      await deleteFile(ctx, interview.pngFileId)
     }
     await ctx.db.patch(id, {
       sceneHash,

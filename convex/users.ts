@@ -1,3 +1,4 @@
+import { deleteFile } from "./helpers"
 import { ConvexError, v } from "convex/values"
 
 import { authComponent } from "./auth"
@@ -66,7 +67,7 @@ export const purge = internalMutation({
       .query("interviews")
       .withIndex("by_ownerId", (q) => q.eq("ownerId", userId))
       .collect()) {
-      if (i.pngFileId) await ctx.storage.delete(i.pngFileId)
+      if (i.pngFileId) await deleteFile(ctx, i.pngFileId)
       await ctx.db.delete(i._id)
     }
     for (const b of await ctx.db

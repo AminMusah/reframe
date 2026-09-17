@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import * as React from "react"
 
 import { api } from "@/convex/_generated/api"
+import { leaveTo } from "@/lib/leave"
 
 /**
  * Open the most recent drawing (creating one if none). Used instead of
@@ -21,7 +22,7 @@ export function useGoHome() {
     } catch (err) {
       // Between a sign-out or account deletion and the next anonymous
       // session there is a moment with no identity; a fresh load sorts it.
-      if (String(err).includes("Unauthenticated")) window.location.replace("/")
+      if (String(err).includes("Unauthenticated")) leaveTo("/")
       else throw err
     }
   }, [openMostRecent, router])

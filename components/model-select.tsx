@@ -18,6 +18,9 @@ import { cn } from "@/lib/utils"
  * one-line note. Sized like the rest of the fields (40 px, 14 px text), and
  * the list opens as a card of rows rather than the browser's native menu.
  */
+// "Dialog" is Excalidraw's marker: while an element with that class exists,
+// a click outside its sidebar does not close it (it does on narrow windows
+// otherwise, which would close the panel when picking from this overlay).
 export function ModelSelect({
   apiKey,
   value,
@@ -67,7 +70,7 @@ export function ModelSelect({
           alignItemWithTrigger={false}
           className="z-[210]"
         >
-          <SelectPrimitive.Popup className="w-(--anchor-width) min-w-64 origin-(--transform-origin) rounded-xl bg-background p-1.5 text-foreground ring-1 ring-foreground/10 outline-none data-open:animate-in data-open:duration-150 data-open:ease-[var(--ease-out-strong)] data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:duration-100 data-closed:fade-out-0 data-closed:zoom-out-98">
+          <SelectPrimitive.Popup className="Dialog w-(--anchor-width) min-w-64 origin-(--transform-origin) rounded-xl bg-background p-1.5 text-foreground ring-1 ring-foreground/10 outline-none data-open:animate-in data-open:duration-150 data-open:ease-[var(--ease-out-strong)] data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:duration-100 data-closed:fade-out-0 data-closed:zoom-out-98">
             <SelectPrimitive.List>
               {models.map((m) => (
                 <SelectPrimitive.Item

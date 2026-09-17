@@ -1,3 +1,4 @@
+import { deleteFile } from "./helpers"
 import { ConvexError, v } from "convex/values"
 
 import { authComponent } from "./auth"
@@ -140,11 +141,11 @@ export async function removeProject(
       )
       .collect()
     for (const brief of briefs) await ctx.db.delete(brief._id)
-    if (interview.pngFileId) await ctx.storage.delete(interview.pngFileId)
+    if (interview.pngFileId) await deleteFile(ctx, interview.pngFileId)
     await ctx.db.delete(interview._id)
   }
-  if (project.sceneFileId) await ctx.storage.delete(project.sceneFileId)
-  if (project.pngFileId) await ctx.storage.delete(project.pngFileId)
+  if (project.sceneFileId) await deleteFile(ctx, project.sceneFileId)
+  if (project.pngFileId) await deleteFile(ctx, project.pngFileId)
   await ctx.db.delete(project._id)
 }
 
@@ -183,7 +184,7 @@ export const saveScene = mutation({
       ...(name && project.name === DEFAULT_NAME ? { name } : {}),
     })
     if (project.sceneFileId && project.sceneFileId !== storageId) {
-      await ctx.storage.delete(project.sceneFileId)
+      await deleteFile(ctx, project.sceneFileId)
     }
   },
 })

@@ -9,6 +9,7 @@ import * as React from "react"
 
 import { api } from "@/convex/_generated/api"
 import { authClient } from "@/lib/auth-client"
+import { armLeaveGuard } from "@/lib/leave"
 import { PENDING_LINK_KEY } from "@/lib/pending-link"
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!, {
@@ -16,6 +17,7 @@ const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!, {
 })
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  React.useEffect(() => armLeaveGuard(), [])
   return (
     // The provider types its client generically; a client with concrete
     // plugins (anonymous) infers a narrower session type that TS rejects.

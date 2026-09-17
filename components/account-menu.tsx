@@ -40,6 +40,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { api } from "@/convex/_generated/api"
 import { authClient } from "@/lib/auth-client"
 import { PENDING_LINK_KEY } from "@/lib/pending-link"
+import { leaveTo } from "@/lib/leave"
 import { clearAllMirrors } from "@/lib/scene-store"
 import { cn } from "@/lib/utils"
 
@@ -305,7 +306,7 @@ function DeleteAccountDialog({
                 clearAllMirrors()
                 // Straight to a fresh load: Providers signs in anonymously
                 // there, and nothing here is left to react to the deletion.
-                window.location.replace("/")
+                leaveTo("/")
               } catch (err) {
                 setError(
                   err instanceof Error

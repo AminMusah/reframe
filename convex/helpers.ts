@@ -1,4 +1,4 @@
-// Shared by the "use node" actions only (Buffer is Node-specific).
+// loadPng and toHistory are for the "use node" actions (Buffer); deleteFile is for mutations too.
 import type { HistoryEntry } from "../lib/llm/interview"
 import type { Doc, Id } from "./_generated/dataModel"
 import type { ActionCtx } from "./_generated/server"
@@ -49,4 +49,20 @@ export function toHistory(turns: Doc<"interviews">["turns"]): HistoryEntry[] {
 /** Every short id the serializer emitted, so cited ids can be validated. */
 export function graphIds(graph: string): string[] {
   return Array.from(graph.matchAll(/^\s*([a-z]\d+)\b/gm), (m) => m[1])
+}
+
+/**
+ * Delete a stored file if it still exists. A reference can outlive its file
+ * (an interview PNG replaced on rebase, an old scene), and `storage.delete`
+ * throws on a missing id — which must not sink the mutation around it.
+ */
+export async function deleteFile(
+  ctx: { storage: { delete: (id: Id<"_storage">) => Promise<void> } },
+  id: Id<"_storage">
+): Promise<void> {
+  try {
+    await ctx.storage.delete(id)
+  } catch {
+    // Already gone.
+  }
 }
