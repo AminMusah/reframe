@@ -13,7 +13,9 @@ import { useAutosave, type SaveStatus } from "@/hooks/use-autosave"
 import { libraryAdapter } from "@/lib/library-store"
 import type { SerializedScene } from "@/lib/serializer"
 
+import { AccountAvatar } from "@/components/account-menu"
 import { Logo } from "@/components/logo"
+import { PANEL } from "@/lib/panel"
 import { DrawingsList } from "@/components/project-menu"
 import { applyEdit } from "@/lib/edits/apply"
 import { serializeScene } from "@/lib/serializer"
@@ -21,7 +23,7 @@ import { serializeScene } from "@/lib/serializer"
 import { Chrome, type ChromeDialog } from "./chrome"
 import { loadScene } from "./load-scene"
 
-export const PANEL = "reframe"
+export { PANEL }
 /**
  * The canvas is the app's white ground; the grey panels float on it with no
  * border or shadow. Excalidraw inverts it itself in dark mode.
@@ -142,7 +144,8 @@ export default function ExcalidrawCanvas({
   }
 
   return (
-    <div className="h-full w-full">
+    <div className="relative h-full w-full">
+      <AccountAvatar onOpenKey={() => setDialog("key")} />
       <Excalidraw
         initialData={initialData}
         onChange={onChange}

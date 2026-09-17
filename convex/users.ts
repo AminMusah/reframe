@@ -1,9 +1,11 @@
 import { ConvexError, v } from "convex/values"
 
 import { authComponent } from "./auth"
+import { removeProject } from "./projects"
 import {
   internalMutation,
   mutation,
+  query,
   type MutationCtx,
 } from "./_generated/server"
 
@@ -43,6 +45,63 @@ export const transferOwnership = internalMutation({
   args: { fromUserId: v.string(), toUserId: v.string() },
   handler: async (ctx, { fromUserId, toUserId }) => {
     await transfer(ctx, fromUserId, toUserId)
+  },
+})
+
+/**
+ * Everything a user made, gone: drawings with their files, interviews,
+ * prompts, pending links. Better Auth calls this from its delete-user hook
+ * before it removes the user itself.
+ */
+export const purge = internalMutation({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_owner_and_updatedAt", (q) => q.eq("ownerId", userId))
+      .collect()
+    for (const p of projects) await removeProject(ctx, p)
+    // Anything transferred in but left without a project (should be none).
+    for (const i of await ctx.db
+      .query("interviews")
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", userId))
+      .collect()) {
+      if (i.pngFileId) await ctx.storage.delete(i.pngFileId)
+      await ctx.db.delete(i._id)
+    }
+    for (const b of await ctx.db
+      .query("briefs")
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", userId))
+      .collect())
+      await ctx.db.delete(b._id)
+    for (const l of await ctx.db.query("pendingLinks").collect()) {
+      if (l.fromUserId === userId) await ctx.db.delete(l._id)
+    }
+  },
+})
+
+/** What deleting the account would take with it; shown in the confirmation. */
+export const footprint = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await authComponent.getAuthUser(ctx)
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_owner_and_updatedAt", (q) => q.eq("ownerId", user._id))
+      .collect()
+    const interviews = await ctx.db
+      .query("interviews")
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", user._id))
+      .collect()
+    const briefs = await ctx.db
+      .query("briefs")
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", user._id))
+      .collect()
+    return {
+      drawings: projects.length,
+      interviews: interviews.length,
+      prompts: briefs.filter((b) => b.status === "done").length,
+    }
   },
 })
 

@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values"
 
 import { authComponent } from "./auth"
+import type { Id } from "./_generated/dataModel"
 import type { MutationCtx, QueryCtx } from "./_generated/server"
 import { internalMutation, mutation, query } from "./_generated/server"
 import { DEFAULT_NAME } from "./projects"
@@ -125,5 +126,47 @@ export const setError = internalMutation({
   args: { id: v.id("briefs"), code: errorCode },
   handler: async (ctx, { id, code }) => {
     await ctx.db.patch(id, { status: "error", lastError: code })
+  },
+})
+
+/** Finished prompts for a drawing, newest first — the ones behind the current one. */
+export const historyForProject = query({
+  args: { projectId: v.id("projects") },
+  handler: async (ctx, { projectId }) => {
+    const userId = await requireUserId(ctx)
+    const interviews = await ctx.db
+      .query("interviews")
+      .withIndex("by_project_and_createdAt", (q) =>
+        q.eq("projectId", projectId)
+      )
+      .order("desc")
+      .collect()
+    const out: {
+      interviewId: Id<"interviews">
+      briefId: Id<"briefs">
+      createdAt: number
+      text: string
+      model: string
+    }[] = []
+    for (const i of interviews) {
+      if (i.ownerId !== userId) continue
+      const brief = await ctx.db
+        .query("briefs")
+        .withIndex("by_interview_and_createdAt", (q) =>
+          q.eq("interviewId", i._id)
+        )
+        .order("desc")
+        .first()
+      if (brief && brief.status === "done") {
+        out.push({
+          interviewId: i._id,
+          briefId: brief._id,
+          createdAt: brief.createdAt,
+          text: brief.text,
+          model: brief.model,
+        })
+      }
+    }
+    return out
   },
 })

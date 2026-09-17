@@ -41,3 +41,14 @@ export function clearMirror(projectId: string): void {
     // Storage may be unavailable; nothing to clear then.
   }
 }
+
+/** Every mirrored scene — after the account (and its drawings) is deleted. */
+export function clearAllMirrors(): void {
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith("reframe:scene:")) localStorage.removeItem(k)
+    }
+  } catch {
+    // Storage may be unavailable; nothing to clear then.
+  }
+}

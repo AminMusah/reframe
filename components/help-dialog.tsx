@@ -43,6 +43,7 @@ const GROUPS: { title: string; rows: [string, string[]][] }[] = [
   {
     title: "Interview",
     rows: [
+      ["Generate prompt", ["Ctrl", "Enter"]],
       ["Pick an option", ["1–5"]],
       ["Send a written answer", ["Enter"]],
       ["New line in an answer", ["Shift", "Enter"]],

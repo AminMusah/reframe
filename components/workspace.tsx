@@ -79,6 +79,7 @@ function Project({ projectId }: { projectId: Id<"projects"> }) {
         panel={
           <InterviewPanel
             projectId={projectId}
+            projectName={project.name}
             scene={scene}
             sceneHash={sceneHash}
             excalidrawApi={apiRef}

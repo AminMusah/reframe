@@ -11,25 +11,20 @@ import {
   Book02Icon,
   Eraser01Icon,
   Image02Icon,
-  Key01Icon,
-  Login03Icon,
-  Logout03Icon,
   MagicWand01Icon,
-  Moon02Icon,
   PencilEdit02Icon,
+  Copy02Icon,
   SparklesIcon,
-  Sun03Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useMutation, useQuery } from "convex/react"
-import { useTheme } from "next-themes"
+import { useMutation } from "convex/react"
+import { useRouter } from "next/navigation"
 import * as React from "react"
 
 import { HelpDialog } from "@/components/help-dialog"
 import { Logo } from "@/components/logo"
 import { KeyDialog } from "@/components/key-dialog"
 import { RenameDialog } from "@/components/project-menu"
-import { SignInDialog } from "@/components/account-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,14 +37,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
-import { authClient } from "@/lib/auth-client"
-import { useApiKey } from "@/lib/llm-settings"
 import { layoutScene } from "@/lib/edits/layout"
 import { measureText } from "@/lib/edits/apply"
 import { useGoHome } from "@/hooks/use-go-home"
-import { clearMirror } from "@/lib/scene-store"
+import { PANEL, requestGenerate } from "@/lib/panel"
+import { clearMirror, writeMirror } from "@/lib/scene-store"
 
-const icon = (i: typeof Key01Icon) => (
+const icon = (i: typeof Copy02Icon) => (
   <HugeiconsIcon icon={i} strokeWidth={2} size={16} />
 )
 
@@ -57,8 +51,7 @@ const icon = (i: typeof Key01Icon) => (
  * Everything that used to live in the app header, folded into Excalidraw's
  * own menu and welcome screen so the canvas is the whole window.
  */
-export type ChromeDialog =
-  "rename" | "delete" | "clear" | "key" | "signin" | "help" | null
+export type ChromeDialog = "rename" | "delete" | "clear" | "key" | "help" | null
 
 export function Chrome({
   projectId,
@@ -76,14 +69,10 @@ export function Chrome({
   onLoadExample: () => void
 }) {
   const goHome = useGoHome()
-  const { resolvedTheme, setTheme } = useTheme()
-  const [apiKey] = useApiKey()
-  const user = useQuery(api.auth.getCurrentUser)
-  const providers = useQuery(api.auth.providers)
+  const router = useRouter()
   const remove = useMutation(api.projects.remove)
+  const create = useMutation(api.projects.create)
   const close = () => setDialog(null)
-  const anonymous =
-    !user || (user as { isAnonymous?: boolean | null }).isAnonymous
 
   // "?" opens ours; Excalidraw's own help button is hidden.
   React.useEffect(() => {
@@ -96,14 +85,45 @@ export function Chrome({
       e.stopPropagation()
       setDialog("help")
     }
+    // ⌘/Ctrl+Enter from the canvas: Generate prompt.
+    const onGenerate = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" || !(e.metaKey || e.ctrlKey)) return
+      const t = e.target as HTMLElement | null
+      if (t?.closest("input, textarea, [contenteditable]")) return
+      e.preventDefault()
+      e.stopPropagation()
+      excalidraw.current?.toggleSidebar({ name: PANEL, force: true })
+      requestGenerate()
+    }
     window.addEventListener("keydown", onKey, true)
-    return () => window.removeEventListener("keydown", onKey, true)
-  }, [setDialog])
+    window.addEventListener("keydown", onGenerate, true)
+    return () => {
+      window.removeEventListener("keydown", onKey, true)
+      window.removeEventListener("keydown", onGenerate, true)
+    }
+  }, [setDialog, excalidraw])
 
   const deleteProject = async () => {
     await remove({ id: projectId })
     clearMirror(projectId)
     await goHome()
+  }
+
+  // A copy: a new drawing seeded with this scene through the mirror, so the
+  // first autosave uploads its own file (storage files are shared by nothing).
+  const duplicateProject = async () => {
+    const api = excalidraw.current
+    if (!api) return
+    const { serializeAsJSON } = await import("@excalidraw/excalidraw")
+    const json = serializeAsJSON(
+      api.getSceneElements(),
+      api.getAppState(),
+      api.getFiles(),
+      "local"
+    )
+    const id = await create({ name: `${projectName} copy` })
+    writeMirror(id, { json, sceneHash: "", dirty: true, savedAt: Date.now() })
+    router.push(`/?p=${id}`)
   }
 
   return (
@@ -126,6 +146,12 @@ export function Chrome({
             onSelect={() => setDialog("rename")}
           >
             Rename
+          </MainMenu.Item>
+          <MainMenu.Item
+            icon={icon(Copy02Icon)}
+            onSelect={() => void duplicateProject()}
+          >
+            Duplicate drawing
           </MainMenu.Item>
           <MainMenu.Item
             icon={icon(Delete02Icon)}
@@ -193,36 +219,6 @@ export function Chrome({
           Clear the canvas…
         </MainMenu.Item>
         <MainMenu.Separator />
-        <MainMenu.Item icon={icon(Key01Icon)} onSelect={() => setDialog("key")}>
-          {apiKey ? "Model & API key" : "Add an API key…"}
-        </MainMenu.Item>
-        <MainMenu.Item
-          icon={icon(resolvedTheme === "dark" ? Sun03Icon : Moon02Icon)}
-          onSelect={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-        >
-          {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
-        </MainMenu.Item>
-        {anonymous
-          ? (providers?.length ?? 0) > 0 && (
-              <MainMenu.Item
-                icon={icon(Login03Icon)}
-                onSelect={() => setDialog("signin")}
-              >
-                Sign in…
-              </MainMenu.Item>
-            )
-          : user && (
-              <MainMenu.Item
-                icon={icon(Logout03Icon)}
-                onSelect={async () => {
-                  await authClient.signOut()
-                  await authClient.signIn.anonymous()
-                }}
-              >
-                Sign out ({user.name || user.email})
-              </MainMenu.Item>
-            )}
-        <MainMenu.Separator />
         <MainMenu.Item
           icon={icon(HelpCircleIcon)}
           shortcut="?"
@@ -289,10 +285,6 @@ export function Chrome({
       <KeyDialog open={dialog === "key"} onOpenChange={(o) => !o && close()} />
       <HelpDialog
         open={dialog === "help"}
-        onOpenChange={(o) => !o && close()}
-      />
-      <SignInDialog
-        open={dialog === "signin"}
         onOpenChange={(o) => !o && close()}
       />
       <AlertDialog

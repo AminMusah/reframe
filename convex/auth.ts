@@ -41,6 +41,19 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
     trustedOrigins: [siteUrl],
     database: authComponent.adapter(ctx),
     socialProviders: socialProviders(),
+    // Delete account: the app purges its own tables first, then Better Auth
+    // removes the user and sessions. No freshness gate — the typed
+    // confirmation in the UI is the guard, and sessions here are long-lived.
+    session: { freshAge: 0 },
+    user: {
+      deleteUser: {
+        enabled: true,
+        beforeDelete: async (user) => {
+          if (!("runMutation" in ctx)) return
+          await ctx.runMutation(internal.users.purge, { userId: user.id })
+        },
+      },
+    },
     plugins: [
       // Every visitor is signed in anonymously on first load. Signing in with
       // a provider links the accounts; their work follows them.

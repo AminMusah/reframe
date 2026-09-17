@@ -16,6 +16,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 
 import { BriefView } from "@/components/brief-view"
+import { Markdown as MarkdownView } from "@/components/markdown"
 import { KeyForm } from "@/components/key-form"
 import { Button } from "@/components/ui/button"
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
@@ -28,6 +29,7 @@ import { applyEdit } from "@/lib/edits/apply"
 import { describeProblems } from "@/lib/edits/layout"
 import { applySketch, placeSketch } from "@/lib/edits/sketch-apply"
 import { useApiKey, useModel } from "@/lib/llm-settings"
+import { consumeGenerate, GENERATE_EVENT } from "@/lib/panel"
 import { isModelId, modelsFor, providerForKey } from "@/lib/llm/models"
 import {
   hashScene,
@@ -44,11 +46,13 @@ type Turn = Interview["turns"][number]
 
 export function InterviewPanel({
   projectId,
+  projectName,
   scene,
   sceneHash,
   excalidrawApi,
 }: {
   projectId: Id<"projects">
+  projectName: string
   scene: SerializedScene | null
   /** Hash of what is on the canvas now; differs from the interview's once the drawing changes. */
   sceneHash: string | null
@@ -443,6 +447,33 @@ export function InterviewPanel({
     }
   }
 
+  // ⌘/Ctrl+Enter (see chrome.tsx): open the panel; when idle with a drawing
+  // and a key, start straight away.
+  const latest = React.useRef({ interview, busy, apiKey, nodeCount })
+  React.useEffect(() => {
+    latest.current = { interview, busy, apiKey, nodeCount }
+  })
+  const startIfIdle = () => {
+    const { interview, busy, apiKey, nodeCount } = latest.current
+    const idle = !interview || interview.status === "done"
+    if (idle && !busy && apiKey && nodeCount > 0) void reframe()
+  }
+  React.useEffect(() => {
+    // Pressed while the panel was closed: the chrome opened it, and the
+    // request is waiting for us — but only once the interview query is in.
+    if (interview !== undefined && consumeGenerate()) startIfIdle()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interview === undefined])
+  React.useEffect(() => {
+    const onGenerate = () => {
+      if (consumeGenerate()) startIfIdle()
+    }
+    window.addEventListener(GENERATE_EVENT, onGenerate)
+    return () => window.removeEventListener(GENERATE_EVENT, onGenerate)
+    // reframe is recreated every render; the ref carries the live state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   if (interview === undefined) return null
 
   const idle = !interview || interview.status === "done"
@@ -643,6 +674,13 @@ export function InterviewPanel({
               <BriefView
                 interviewId={interview._id}
                 apiKey={apiKey}
+                fileName={projectName}
+                below={
+                  <PastPrompts
+                    projectId={projectId}
+                    currentInterviewId={interview._id}
+                  />
+                }
                 actions={
                   <Button
                     size="sm"
@@ -719,6 +757,93 @@ export function InterviewPanel({
       )}
     </div>
   )
+}
+
+/**
+ * Earlier finished prompts for this drawing, collapsed under the current
+ * one — so "Interview again" never loses anything.
+ */
+function PastPrompts({
+  projectId,
+  currentInterviewId,
+}: {
+  projectId: Id<"projects">
+  currentInterviewId: Id<"interviews">
+}) {
+  const history = useQuery(api.briefs.historyForProject, { projectId })
+  const [open, setOpen] = React.useState(false)
+  const [shown, setShown] = React.useState<Id<"briefs"> | null>(null)
+  const past = (history ?? []).filter(
+    (h) => h.interviewId !== currentInterviewId
+  )
+  if (past.length === 0) return null
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="pressable flex w-full items-center justify-between rounded-xl bg-secondary px-4 py-2.5 text-left text-sm"
+      >
+        <span>
+          Previous prompt{past.length === 1 ? "" : "s"}{" "}
+          <span className="text-muted-foreground">({past.length})</span>
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {open ? "Hide" : "Show"}
+        </span>
+      </button>
+      {open && (
+        <ul className="enter-stagger space-y-2">
+          {past.map((h) => {
+            const expanded = shown === h.briefId
+            const date = new Date(h.createdAt).toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })
+            return (
+              <li key={h.briefId} className="rounded-xl bg-secondary p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShown(expanded ? null : h.briefId)}
+                    className="pressable min-w-0 flex-1 text-left"
+                  >
+                    <p className="truncate text-sm">{firstLine(h.text)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {date} · {h.model}
+                    </p>
+                  </button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(h.text)
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+                {expanded && (
+                  <div className="enter mt-3 rounded-lg bg-background px-3 py-2">
+                    <MarkdownView>{h.text}</MarkdownView>
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function firstLine(text: string) {
+  const line =
+    text
+      .split("\n")
+      .map((l) => l.replace(/^#+\s*/, "").trim())
+      .find((l) => l && !/^goal$/i.test(l)) ?? "Prompt"
+  return line
 }
 
 /* ---------- surfaces ---------- */

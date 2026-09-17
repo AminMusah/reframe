@@ -75,8 +75,11 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="Deleting your data">
-        Email the address below and your account, projects, drawings, interviews
-        and prompts will be deleted.
+        Signed in, open the account menu (bottom left) and choose{" "}
+        <em>Delete account</em>: your drawings, interviews, prompts, stored
+        files and the account itself are removed at once, with no undo. Guest
+        data lives in your browser; deleting drawings or clearing site data
+        removes it. For anything else, email the address below.
       </Section>
 
       <Section title="Contact">

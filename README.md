@@ -2,7 +2,7 @@
 
 Draw what you're building, answer a short interview about it, get a prompt your coding agent (Claude Code, Codex, Cursor…) can build from. Live at [reframe-liard.vercel.app](https://reframe-liard.vercel.app). Design and decisions: [`docs/DESIGN.md`](docs/DESIGN.md).
 
-The canvas is the whole window (Excalidraw, themed with the app's own tokens). Everything else floats over it: ☰ for drawings, Mermaid import, the shape library, tidy-up, export, model & key, theme, sign-in and shortcuts; the drawing's name and **✦ Generate prompt** top-right; the interview panel, the drawings list, search and the shape library as floating cards. Works on phones (the panel goes full-screen, options are tap-sized).
+The canvas is the whole window (Excalidraw, themed with the app's own tokens). Everything else floats over it: ☰ for the drawing (drawings, rename, duplicate, delete, Mermaid import, the shape library, tidy-up, export, find, clear, shortcuts); an avatar bottom-left for you (sign in, model & key, theme, privacy, sign out, delete account); the drawing's name and **✦ Generate prompt** top-right; the interview panel, the drawings list, search and the shape library as floating cards. Works on phones (the panel goes full-screen, options are tap-sized).
 
 ## Local development
 
@@ -25,7 +25,7 @@ npx convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
 npx convex env set SITE_URL http://localhost:3000
 ```
 
-Open the app, draw (or *Load an example drawing*), click **✦ Generate prompt**, paste an API key when the panel asks — Anthropic, OpenAI, Google or OpenRouter; it stays in your browser — pick a model, then **Start the interview**. The interview and the prompt are written in your browser's language.
+Open the app, draw (or *Load an example drawing*), click **✦ Generate prompt** (or Ctrl/⌘+Enter), paste an API key when the panel asks — Anthropic, OpenAI, Google or OpenRouter; it stays in your browser — pick a model, then **Start the interview**. The interview and the prompt are written in your browser's language.
 
 When the interviewer edits the drawing, a tidy pass makes room (and lays the whole drawing out again if that is not enough); **Tidy up the drawing** in ☰ runs the same pass by hand, undoably.
 
