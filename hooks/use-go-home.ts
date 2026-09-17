@@ -15,7 +15,14 @@ export function useGoHome() {
   const router = useRouter()
   const openMostRecent = useMutation(api.projects.openMostRecent)
   return React.useCallback(async () => {
-    const id = await openMostRecent()
-    router.replace(`/?p=${id}`)
+    try {
+      const id = await openMostRecent()
+      router.replace(`/?p=${id}`)
+    } catch (err) {
+      // Between a sign-out or account deletion and the next anonymous
+      // session there is a moment with no identity; a fresh load sorts it.
+      if (String(err).includes("Unauthenticated")) window.location.replace("/")
+      else throw err
+    }
   }, [openMostRecent, router])
 }

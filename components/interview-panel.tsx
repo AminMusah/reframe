@@ -18,8 +18,8 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { BriefView } from "@/components/brief-view"
 import { Markdown as MarkdownView } from "@/components/markdown"
 import { KeyForm } from "@/components/key-form"
+import { ModelSelect } from "@/components/model-select"
 import { Button } from "@/components/ui/button"
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "cn"
@@ -30,7 +30,6 @@ import { describeProblems } from "@/lib/edits/layout"
 import { applySketch, placeSketch } from "@/lib/edits/sketch-apply"
 import { useApiKey, useModel } from "@/lib/llm-settings"
 import { consumeGenerate, GENERATE_EVENT } from "@/lib/panel"
-import { isModelId, modelsFor, providerForKey } from "@/lib/llm/models"
 import {
   hashScene,
   serializeScene,
@@ -709,23 +708,12 @@ export function InterviewPanel({
 
       {(!interview || cleared) && !needsKey && (
         <div className="space-y-2 px-5 py-4">
-          <label className="flex items-center justify-between gap-3 pb-1 text-sm">
-            <span className="text-muted-foreground">Model</span>
-            <NativeSelect
-              size="sm"
-              aria-label="Model"
-              value={model}
-              onChange={(e) => {
-                if (isModelId(e.target.value)) setModel(e.target.value)
-              }}
-            >
-              {modelsFor(providerForKey(apiKey!)).map((m) => (
-                <NativeSelectOption key={m.id} value={m.id}>
-                  {m.label}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </label>
+          <div className="space-y-1.5 pb-1">
+            <p className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
+              Model
+            </p>
+            <ModelSelect apiKey={apiKey!} value={model} onChange={setModel} />
+          </div>
           <Button
             size="lg"
             className="w-full"

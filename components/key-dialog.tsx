@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { KeyForm } from "@/components/key-form"
+import { ModelSelect } from "@/components/model-select"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,9 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { useApiKey, useModel } from "@/lib/llm-settings"
-import { isModelId, modelsFor, providerForKey } from "@/lib/llm/models"
 
 /** The BYOK key and the model used for the next interview. */
 export function KeyDialog({
@@ -35,23 +34,10 @@ export function KeyDialog({
           </DialogDescription>
         </DialogHeader>
         {apiKey && (
-          <label className="flex items-center justify-between gap-3 text-sm">
-            <span>Model for the next interview</span>
-            <NativeSelect
-              size="sm"
-              aria-label="Model"
-              value={model}
-              onChange={(e) => {
-                if (isModelId(e.target.value)) setModel(e.target.value)
-              }}
-            >
-              {modelsFor(providerForKey(apiKey)).map((m) => (
-                <NativeSelectOption key={m.id} value={m.id}>
-                  {m.label}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </label>
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium">Model for the next interview</p>
+            <ModelSelect apiKey={apiKey} value={model} onChange={setModel} />
+          </div>
         )}
         <KeyForm
           hasKey={!!apiKey}

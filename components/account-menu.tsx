@@ -303,11 +303,9 @@ function DeleteAccountDialog({
                 const res = await authClient.deleteUser()
                 if (res.error) throw new Error(res.error.message)
                 clearAllMirrors()
-                onOpenChange(false)
-                // Providers signs the empty session in anonymously; the
-                // deleted drawing's URL then routes to a fresh one.
-                await authClient.signIn.anonymous()
-                window.location.assign("/")
+                // Straight to a fresh load: Providers signs in anonymously
+                // there, and nothing here is left to react to the deletion.
+                window.location.replace("/")
               } catch (err) {
                 setError(
                   err instanceof Error
